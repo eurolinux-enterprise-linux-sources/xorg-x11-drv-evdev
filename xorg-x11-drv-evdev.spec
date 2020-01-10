@@ -5,8 +5,8 @@
 
 Summary:    Xorg X11 evdev input driver
 Name:       xorg-x11-drv-evdev
-Version:    2.3.2
-Release:    8%{?dist}
+Version:    2.6.0
+Release:    2%{?dist}
 URL:        http://www.x.org
 License:    MIT
 Group:      User Interface/X Hardware Support
@@ -15,25 +15,21 @@ BuildRoot:  %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 Source0:   ftp://ftp.x.org/pub/individual/driver/%{tarball}-%{version}.tar.bz2
 Source1:   10-x11-lid.fdi
 
-# 562687 - Option "ReopenAttempts" with a value of 0 leads to infinite
-# reopen attempts
-Patch001:   evdev-2.3.2-reopen-infinity.patch
-# 583878 - evdev sends motion events for wheel events
-Patch002:   evdev-2.3.2-wheel-motion-events.patch
-# 584234 - evdev leaks memory
-Patch003:   evdev-2.3.2-memory-leaks.patch
-# 609333 - out-of-bounds memory access for valuators > MAX_VALUATORS
-Patch004:   evdev-2.3.2-max-valuators-oob.patch
 # 618845 - Laptop monitor is activated when notebook lid is closed
-Patch005:   evdev-2.3.2-lid.patch
+Patch005:   evdev-2.6.0-lid.patch
+# Revert MB changes from upstream, ship with RHEL 6 defaults
+Patch006:   evdev-2.6.0-revert-mb-emu-changes.patch
+# Avoid log closure on PreInit failure
+Patch007:   evdev-2.6.0-Always-reset-the-fd-to-1.patch
 
 ExcludeArch: s390 s390x
 
 BuildRequires: autoconf automake libtool
-BuildRequires: xorg-x11-server-sdk >= 1.5.99.1
-BuildRequires:  xorg-x11-util-macros >= 1.3.0
+BuildRequires: xorg-x11-server-sdk >= 1.10.0-1
+BuildRequires: xorg-x11-util-macros >= 1.8.0
 
-Requires:  xorg-x11-server-Xorg >= 1.5.99.1
+Requires:  Xorg %(xserver-sdk-abi-requires ansic)
+Requires:  Xorg %(xserver-sdk-abi-requires xinput)
 Requires:  xkeyboard-config >= 1.4-1
 
 %description 
@@ -42,13 +38,12 @@ X.Org X11 evdev input driver.
 %prep
 %setup -q -n %{tarball}-%{version}
 
-%patch001 -p1
-%patch002 -p1
-%patch003 -p1
-%patch004 -p1
 %patch005 -p1
+%patch006 -p1
+%patch007 -p1
 
 %build
+autoreconf -v --force --install || exit 1
 %configure --disable-static
 make
 
@@ -87,6 +82,15 @@ X.Org X11 evdev input driver development files.
 
 
 %changelog
+* Fri Jul 22 2011 Peter Hutterer <peter.hutterer@redhat.com> 2.6.0-2
+- evdev-2.6.0-Always-reset-the-fd-to-1.patch: avoid early log file closure
+
+* Thu Jun 30 2011 Peter Hutterer <peter.hutterer@redhat.com> 2.6.0-1
+- evdev 2.6.0 (#713786)
+- evdev-2.6.0-lid.patch: update against 2.6.0
+- evdev-2.6.0-revert-mb-emu-changes.patch: go back to previous MB emulation
+  defaults
+
 * Fri Jul 30 2010 Adam Jackson <ajax@redhat.com> 2.3.2-8
 - 10-x11-lid.fdi: Add so switch devices appear to have an X driver in hal.
 - evdev-2.3.2-lid.patch: Scan for lid switch devices, translate events on

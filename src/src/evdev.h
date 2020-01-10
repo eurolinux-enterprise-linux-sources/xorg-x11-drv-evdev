@@ -34,11 +34,12 @@
 #include <linux/input.h>
 #include <linux/types.h>
 
+#include <xorg-server.h>
 #include <xf86Xinput.h>
 #include <xf86_OSproc.h>
 #include <xkbstr.h>
 
-#ifndef EV_CNT /* linux 2.4 kernels and earlier lack _CNT defines */
+#ifndef EV_CNT /* linux 2.6.23 kernels and earlier lack _CNT defines */
 #define EV_CNT (EV_MAX+1)
 #endif
 #ifndef KEY_CNT
@@ -56,6 +57,20 @@
 
 #define EVDEV_MAXBUTTONS 32
 #define EVDEV_MAXQUEUE 32
+
+/* evdev flags */
+#define EVDEV_KEYBOARD_EVENTS	(1 << 0)
+#define EVDEV_BUTTON_EVENTS	(1 << 1)
+#define EVDEV_RELATIVE_EVENTS	(1 << 2)
+#define EVDEV_ABSOLUTE_EVENTS	(1 << 3)
+#define EVDEV_TOUCHPAD		(1 << 4)
+#define EVDEV_INITIALIZED	(1 << 5) /* WheelInit etc. called already? */
+#define EVDEV_TOUCHSCREEN	(1 << 6)
+#define EVDEV_CALIBRATED	(1 << 7) /* run-time calibrated? */
+#define EVDEV_TABLET		(1 << 8) /* device looks like a tablet? */
+#define EVDEV_UNIGNORE_ABSOLUTE (1 << 9) /* explicitly unignore abs axes */
+#define EVDEV_UNIGNORE_RELATIVE (1 << 10) /* explicitly unignore rel axes */
+#define EVDEV_RELATIVE_MODE	(1 << 11) /* Force relative events for devices with absolute axes */
 
 #if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 3
 #define HAVE_PROPERTIES 1
@@ -94,6 +109,7 @@ typedef struct {
     enum {
         EV_QUEUE_KEY,	/* xf86PostKeyboardEvent() */
         EV_QUEUE_BTN,	/* xf86PostButtonEvent() */
+        EV_QUEUE_PROXIMITY, /* xf86PostProximityEvent() */
     } type;
     int key;		/* May be either a key code or button number. */
     int val;		/* State of the key/button; pressed or released. */
@@ -109,14 +125,16 @@ typedef struct {
     int old_vals[MAX_VALUATORS]; /* Translate absolute inputs to relative */
 
     int flags;
-    int tool;
+    int in_proximity;           /* device in proximity */
+    int use_proximity;          /* using the proximity bit? */
     int num_buttons;            /* number of buttons */
     BOOL swap_axes;
     BOOL invert_x;
     BOOL invert_y;
 
     int delta[REL_CNT];
-    unsigned int abs, rel;
+    unsigned int abs_queued, rel_queued, prox_queued;
+    unsigned int abs_prox;  /* valuators posted while out of prox? */
 
     /* XKB stuff has to be per-device rather than per-driver */
 #if GET_ABI_MAJOR(ABI_XINPUT_VERSION) < 5
@@ -183,11 +201,12 @@ typedef struct {
 /* Event posting functions */
 void EvdevQueueKbdEvent(InputInfoPtr pInfo, struct input_event *ev, int value);
 void EvdevQueueButtonEvent(InputInfoPtr pInfo, int button, int value);
+void EvdevQueueProximityEvent(InputInfoPtr pInfo, int value);
 void EvdevPostButtonEvent(InputInfoPtr pInfo, int button, int value);
 void EvdevQueueButtonClicks(InputInfoPtr pInfo, int button, int count);
-void EvdevPostRelativeMotionEvents(InputInfoPtr pInfo, int *num_v, int *first_v,
+void EvdevPostRelativeMotionEvents(InputInfoPtr pInfo, int num_v, int first_v,
 				   int v[MAX_VALUATORS]);
-void EvdevPostAbsoluteMotionEvents(InputInfoPtr pInfo, int *num_v, int *first_v,
+void EvdevPostAbsoluteMotionEvents(InputInfoPtr pInfo, int num_v, int first_v,
 				   int v[MAX_VALUATORS]);
 unsigned int EvdevUtilButtonEventToButtonNumber(EvdevPtr pEvdev, int code);
 
@@ -199,7 +218,6 @@ void EvdevMBEmuBlockHandler(pointer, struct timeval**, pointer);
 void EvdevMBEmuPreInit(InputInfoPtr);
 void EvdevMBEmuOn(InputInfoPtr);
 void EvdevMBEmuFinalize(InputInfoPtr);
-void EvdevMBEmuEnable(InputInfoPtr, BOOL);
 
 /* Mouse Wheel emulation */
 void EvdevWheelEmuPreInit(InputInfoPtr pInfo);

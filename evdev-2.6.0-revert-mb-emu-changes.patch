@@ -1,0 +1,114 @@
+From fbc7580ad14e398c1dc2b2fd60af8eb6b7516804 Mon Sep 17 00:00:00 2001
+From: Peter Hutterer <peter.hutterer@who-t.net>
+Date: Thu, 30 Jun 2011 14:41:52 +1000
+Subject: [PATCH] Revert "Disable middle mouse button emulation by default."
+
+RHEL6.0 shipped with MB emulation enabled (auto), don't change this
+behaviour.
+
+This reverts commit 21a2ac818e75ef918d320ce1e88b6263e68e598d.
+---
+ man/evdev.man |    3 ++-
+ src/emuMB.c   |   38 +++++++++++++++++++++++++++++++++++---
+ src/evdev.h   |    1 +
+ 3 files changed, 38 insertions(+), 4 deletions(-)
+
+diff --git a/man/evdev.man b/man/evdev.man
+index adb3f8d..f0b8c8e 100644
+--- a/man/evdev.man
++++ b/man/evdev.man
+@@ -85,7 +85,8 @@ indicating that the next button pressed is to be
+ .BI "Option \*qEmulate3Buttons\*q \*q" boolean \*q
+ Enable/disable the emulation of the third (middle) mouse button for mice
+ which only have two physical buttons.  The third button is emulated by
+-pressing both buttons simultaneously.  Default: off. Property: "Evdev Middle
++pressing both buttons simultaneously.  Default: off for touchscreens, otherwise
++on until a middle mouse button event is registered. Property: "Evdev Middle
+ Button Emulation".
+ .TP 7
+ .BI "Option \*qEmulate3Timeout\*q \*q" integer \*q
+diff --git a/src/emuMB.c b/src/emuMB.c
+index 764b30e..c33ea8e 100644
+--- a/src/emuMB.c
++++ b/src/emuMB.c
+@@ -43,6 +43,12 @@
+ 
+ #include <evdev-properties.h>
+ 
++enum {
++    MBEMU_DISABLED = 0,
++    MBEMU_ENABLED,
++    MBEMU_AUTO
++};
++
+ #ifdef HAVE_PROPERTIES
+ static Atom prop_mbemu     = 0; /* Middle button emulation on/off property */
+ static Atom prop_mbtimeout = 0; /* Middle button timeout property */
+@@ -226,6 +232,11 @@ EvdevMBEmuFilterEvent(InputInfoPtr pInfo, int button, BOOL press)
+     if (!pEvdev->emulateMB.enabled)
+         return ret;
+ 
++    if (button == 2) {
++        EvdevMBEmuEnable(pInfo, FALSE);
++        return ret;
++    }
++
+     /* don't care about other buttons */
+     if (button != 1 && button != 3)
+         return ret;
+@@ -300,9 +311,20 @@ EvdevMBEmuPreInit(InputInfoPtr pInfo)
+ {
+     EvdevPtr pEvdev = (EvdevPtr)pInfo->private;
+ 
+-    pEvdev->emulateMB.enabled = xf86SetBoolOption(pInfo->options,
+-                                                  "Emulate3Buttons",
+-                                                  FALSE);
++    if (pEvdev->flags & EVDEV_TOUCHSCREEN)
++        pEvdev->emulateMB.enabled = MBEMU_DISABLED;
++    else
++        pEvdev->emulateMB.enabled = MBEMU_AUTO;
++
++    if (xf86FindOption(pInfo->options, "Emulate3Buttons"))
++    {
++        pEvdev->emulateMB.enabled = xf86SetBoolOption(pInfo->options,
++                                                      "Emulate3Buttons",
++                                                      MBEMU_ENABLED);
++        xf86Msg(X_INFO, "%s: Forcing middle mouse button emulation %s.\n",
++                pInfo->name, (pEvdev->emulateMB.enabled) ? "on" : "off");
++    }
++
+     pEvdev->emulateMB.timeout = xf86SetIntOption(pInfo->options,
+                                                  "Emulate3Timeout", 50);
+ }
+@@ -330,6 +352,16 @@ EvdevMBEmuFinalize(InputInfoPtr pInfo)
+ 
+ }
+ 
++/* Enable/disable middle mouse button emulation. */
++void
++EvdevMBEmuEnable(InputInfoPtr pInfo, BOOL enable)
++{
++    EvdevPtr pEvdev = (EvdevPtr)pInfo->private;
++    if (pEvdev->emulateMB.enabled == MBEMU_AUTO)
++        pEvdev->emulateMB.enabled = enable;
++}
++
++
+ #ifdef HAVE_PROPERTIES
+ static int
+ EvdevMBEmuSetProperty(DeviceIntPtr dev, Atom atom, XIPropertyValuePtr val,
+diff --git a/src/evdev.h b/src/evdev.h
+index f640fdd..7a94536 100644
+--- a/src/evdev.h
++++ b/src/evdev.h
+@@ -218,6 +218,7 @@ void EvdevMBEmuBlockHandler(pointer, struct timeval**, pointer);
+ void EvdevMBEmuPreInit(InputInfoPtr);
+ void EvdevMBEmuOn(InputInfoPtr);
+ void EvdevMBEmuFinalize(InputInfoPtr);
++void EvdevMBEmuEnable(InputInfoPtr, BOOL);
+ 
+ /* Mouse Wheel emulation */
+ void EvdevWheelEmuPreInit(InputInfoPtr pInfo);
+-- 
+1.7.5.4
+
