@@ -1,0 +1,28 @@
+From 4afda89609b65a6c42a25612ceb5a9f73e8aa4f2 Mon Sep 17 00:00:00 2001
+From: Peter Hutterer <peter.hutterer@who-t.net>
+Date: Mon, 20 Aug 2012 14:56:02 +1000
+Subject: [PATCH evdev] Undefine HAVE_SMOOTH_SCROLLING
+
+None of the RHEL6 stack has smooth scrolling support and it breaks some
+use-cases that rely on button remapping. So undefine it for RHEL6.
+
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+---
+ src/evdev.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/evdev.h b/src/evdev.h
+index 6fe735f..39361ca 100644
+--- a/src/evdev.h
++++ b/src/evdev.h
+@@ -66,6 +66,7 @@
+ #if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 14
+ #define HAVE_SMOOTH_SCROLLING 1
+ #endif
++#undef HAVE_SMOOTH_SCROLLING
+ 
+ #define EVDEV_MAXBUTTONS 32
+ #define EVDEV_MAXQUEUE 32
+-- 
+1.7.11.2
+

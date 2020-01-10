@@ -3,56 +3,67 @@
 %global driverdir %{moduledir}/input
 %global policydir %{_datadir}/hal/fdi/policy/10osvendor
 
+#global gitdate 20120718
+#global gitversion f5ede9808
+
 Summary:    Xorg X11 evdev input driver
 Name:       xorg-x11-drv-evdev
-Version:    2.6.0
-Release:    2%{?dist}
+Version:    2.7.3
+Release:    5%{?gitdate:.%{gitdate}git%{gitversion}}%{?dist}
 URL:        http://www.x.org
 License:    MIT
 Group:      User Interface/X Hardware Support
 BuildRoot:  %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-Source0:   ftp://ftp.x.org/pub/individual/driver/%{tarball}-%{version}.tar.bz2
-Source1:   10-x11-lid.fdi
+%if 0%{?gitdate}
+Source0:    %{tarball}-%{gitdate}.tar.bz2
+Source1:    make-git-snapshot.sh
+Source2:    commitid
+%else
+Source0:    ftp://ftp.x.org/pub/individual/driver/%{tarball}-%{version}.tar.bz2
+%endif
+Source3:    10-x11-lid.fdi
 
-# 618845 - Laptop monitor is activated when notebook lid is closed
-Patch005:   evdev-2.6.0-lid.patch
-# Revert MB changes from upstream, ship with RHEL 6 defaults
-Patch006:   evdev-2.6.0-revert-mb-emu-changes.patch
-# Avoid log closure on PreInit failure
-Patch007:   evdev-2.6.0-Always-reset-the-fd-to-1.patch
+# Bug 805902 - Scrollwheels on tablets are broken
+Patch02: 0001-Allow-relative-scroll-valuators-on-absolute-devices.patch
+Patch03:  evdev-2.6.0-lid.patch
+Patch04:  evdev-2.6.0-revert-mb-emu-changes.patch
+Patch05:  evdev-2.7.3-0001-Undefine-HAVE_SMOOTH_SCROLLING.patch
 
 ExcludeArch: s390 s390x
 
 BuildRequires: autoconf automake libtool
-BuildRequires: xorg-x11-server-sdk >= 1.10.0-1
-BuildRequires: xorg-x11-util-macros >= 1.8.0
-
+BuildRequires: xorg-x11-server-sdk >= 1.10.99.902
+BuildRequires: libxkbfile-devel libudev-devel
+BuildRequires: mtdev-devel
+BuildRequires: xorg-x11-util-macros >= 1.17
 Requires:  Xorg %(xserver-sdk-abi-requires ansic)
 Requires:  Xorg %(xserver-sdk-abi-requires xinput)
 Requires:  xkeyboard-config >= 1.4-1
+Requires: libudev
+Requires: mtdev
 
 %description 
 X.Org X11 evdev input driver.
 
 %prep
-%setup -q -n %{tarball}-%{version}
-
-%patch005 -p1
-%patch006 -p1
-%patch007 -p1
+%setup -q -n %{tarball}-%{?gitdate:%{gitdate}}%{!?gitdate:%{version}}
+%patch02 -p1
+%patch03 -p1
+%patch04 -p1
+%patch05 -p1
 
 %build
-autoreconf -v --force --install || exit 1
-%configure --disable-static
-make
+autoreconf --force -v --install || exit 1
+%configure --disable-static --disable-silent-rules
+make %{?_smp_mflags}
 
 %install
 rm -rf $RPM_BUILD_ROOT
 
 make install DESTDIR=$RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT%{policydir}
-install -m 0644 %{SOURCE1} $RPM_BUILD_ROOT%{policydir}
+install -m 0644 %{SOURCE3} $RPM_BUILD_ROOT%{policydir}
 
 # FIXME: Remove all libtool archives (*.la) from modules directory.  This
 # should be fixed in upstream Makefile.am or whatever.
@@ -63,6 +74,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
+%doc COPYING
 %{driverdir}/evdev_drv.so
 %{_mandir}/man4/evdev.4*
 %{policydir}/10-x11-lid.fdi
@@ -70,18 +82,32 @@ rm -rf $RPM_BUILD_ROOT
 
 %package devel
 Summary:    Xorg X11 evdev input driver development package.
-Group:	    Development/Libraries
+Group:      Development/Libraries
+Requires:   pkgconfig
 %description devel
 X.Org X11 evdev input driver development files.
 
 %files devel
 %defattr(-,root,root,-)
+%doc COPYING
 %{_libdir}/pkgconfig/xorg-evdev.pc
 %dir %{_includedir}/xorg
 %{_includedir}/xorg/evdev-properties.h
 
 
 %changelog
+* Thu Nov 01 2012 Peter Hutterer <peter.hutterer@redhat.com> - 2.7.3-5
+- Fix {?dist} tag (#871447)
+
+* Mon Aug 27 2012 Peter Hutterer <peter.hutterer@redhat.com> - 2.7.3-4
+- Rebuild for server 1.13 (#835225)
+
+* Mon Aug 20 2012 Peter Hutterer <peter.hutterer@redhat.com> 2.7.3-2
+- Merge evdev 2.7.3 from F18 (#835225)
+- Restore RHEL6.x middle mouse button emulation default (auto)
+- Restore RHEL6.x lid patch to re-scan xrandr outputs
+- Disable smooth scrolling, no client stack support
+
 * Fri Jul 22 2011 Peter Hutterer <peter.hutterer@redhat.com> 2.6.0-2
 - evdev-2.6.0-Always-reset-the-fd-to-1.patch: avoid early log file closure
 
