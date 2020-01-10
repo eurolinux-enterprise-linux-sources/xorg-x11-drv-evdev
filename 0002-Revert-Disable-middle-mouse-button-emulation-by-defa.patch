@@ -1,7 +1,7 @@
-From 366bf7d4153c41394310a4ceade9e8a91256657e Mon Sep 17 00:00:00 2001
+From 013ad5327960c6b18694199cd85a56bb8b6eb4f4 Mon Sep 17 00:00:00 2001
 From: Peter Hutterer <peter.hutterer@who-t.net>
 Date: Thu, 30 Jun 2011 14:41:52 +1000
-Subject: [PATCH evdev] Revert "Disable middle mouse button emulation by
+Subject: [PATCH evdev 2/4] Revert "Disable middle mouse button emulation by
  default."
 
 RHEL6.0 shipped with MB emulation enabled (auto), don't change this
@@ -15,7 +15,7 @@ This reverts commit 21a2ac818e75ef918d320ce1e88b6263e68e598d.
  3 files changed, 37 insertions(+), 4 deletions(-)
 
 diff --git a/man/evdev.man b/man/evdev.man
-index 2709d7a..5d003de 100644
+index 220dd13..fa08406 100644
 --- a/man/evdev.man
 +++ b/man/evdev.man
 @@ -86,7 +86,8 @@ indicating that the next button pressed is to be
@@ -29,7 +29,7 @@ index 2709d7a..5d003de 100644
  .TP 7
  .BI "Option \*qEmulate3Timeout\*q \*q" integer \*q
 diff --git a/src/emuMB.c b/src/emuMB.c
-index eb01495..442e211 100644
+index b25eac8..623561b 100644
 --- a/src/emuMB.c
 +++ b/src/emuMB.c
 @@ -43,6 +43,12 @@
@@ -98,10 +98,10 @@ index eb01495..442e211 100644
  EvdevMBEmuSetProperty(DeviceIntPtr dev, Atom atom, XIPropertyValuePtr val,
                        BOOL checkonly)
 diff --git a/src/evdev.h b/src/evdev.h
-index c2f9246..6fe735f 100644
+index 4742b43..cc479dc 100644
 --- a/src/evdev.h
 +++ b/src/evdev.h
-@@ -275,6 +275,7 @@ void EvdevMBEmuBlockHandler(pointer, struct timeval**, pointer);
+@@ -277,6 +277,7 @@ void EvdevMBEmuBlockHandler(pointer, struct timeval**, pointer);
  void EvdevMBEmuPreInit(InputInfoPtr);
  void EvdevMBEmuOn(InputInfoPtr);
  void EvdevMBEmuFinalize(InputInfoPtr);
@@ -110,5 +110,5 @@ index c2f9246..6fe735f 100644
  /* Third button emulation */
  CARD32 Evdev3BEmuTimer(OsTimerPtr timer, CARD32 time, pointer arg);
 -- 
-1.7.11.2
+1.9.0
 

@@ -1,0 +1,188 @@
+From 9d1ef839b5302a8ebf59ef5f5b324c61b625fe9b Mon Sep 17 00:00:00 2001
+From: Peter De Wachter <pdewacht@gmail.com>
+Date: Wed, 3 Oct 2012 22:08:12 +0200
+Subject: [PATCH evdev 5/8] Export smooth scroll settings as an XInput
+ property.
+
+A new property "Evdev Scrolling Distance" is created that holds three values
+(vertical, horizontal and dial).
+
+Signed-off-by: Peter De Wachter <pdewacht@gmail.com>
+Reviewed-by: Peter Hutterer <peter.hutterer@who-t.net>
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+---
+ include/evdev-properties.h |  4 +++
+ man/evdev.man              |  8 +++--
+ src/evdev.c                | 81 ++++++++++++++++++++++++++++++++++++++--------
+ 3 files changed, 77 insertions(+), 16 deletions(-)
+
+diff --git a/include/evdev-properties.h b/include/evdev-properties.h
+index 745a1ba..8ae5ba3 100644
+--- a/include/evdev-properties.h
++++ b/include/evdev-properties.h
+@@ -87,4 +87,8 @@
+ */
+ #define EVDEV_PROP_FUNCTION_KEYS "Evdev Function Keys"
+ 
++/* Smooth scroll */
++/* INT32, 3 values (vertical, horizontal, dial) */
++#define EVDEV_PROP_SCROLL_DISTANCE "Evdev Scrolling Distance"
++
+ #endif
+diff --git a/man/evdev.man b/man/evdev.man
+index 417d0ff..3850dbb 100644
+--- a/man/evdev.man
++++ b/man/evdev.man
+@@ -230,14 +230,15 @@ need quirks.
+ .TP 7
+ .BI "Option \*qVertScrollDelta\*q \*q" integer \*q
+ The amount of motion considered one unit of scrolling vertically.
+-Default: "1".
++Default: "1".  Property: "Evdev Scrolling Distance".
+ .TP 7
+ .BI "Option \*qHorizScrollDelta\*q \*q" integer \*q
+ The amount of motion considered one unit of scrolling horizontally.
+-Default: "1".
++Default: "1".  Property: "Evdev Scrolling Distance".
+ .TP 7
+ .BI "Option \*qDialDelta\*q \*q" integer \*q
+ The amount of motion considered one unit of turning the dial.  Default: "1".
++Property: "Evdev Scrolling Distance".
+ 
+ .SH SUPPORTED PROPERTIES
+ The following properties are provided by the
+@@ -278,6 +279,9 @@ value.
+ .TP 7
+ .BI "Evdev Wheel Emulation Timeout"
+ 1 16-bit positive value.
++.TP 7
++.BI "Evdev Scrolling Distance"
++3 32-bit values: vertical, horizontal and dial.
+ 
+ .SH AUTHORS
+ Kristian Høgsberg, Peter Hutterer
+diff --git a/src/evdev.c b/src/evdev.c
+index ca4851b..ffe672d 100644
+--- a/src/evdev.c
++++ b/src/evdev.c
+@@ -133,6 +133,7 @@ static Atom prop_axis_label;
+ static Atom prop_btn_label;
+ static Atom prop_device;
+ static Atom prop_virtual;
++static Atom prop_scroll_dist;
+ 
+ static int EvdevSwitchMode(ClientPtr client, DeviceIntPtr device, int mode)
+ {
+@@ -1599,6 +1600,42 @@ out:
+ }
+ 
+ static int
++EvdevSetScrollValuators(DeviceIntPtr device)
++{
++#ifdef HAVE_SMOOTH_SCROLLING
++    InputInfoPtr pInfo;
++    EvdevPtr pEvdev;
++    int axnum;
++
++    pInfo = device->public.devicePrivate;
++    pEvdev = pInfo->private;
++
++    axnum = pEvdev->rel_axis_map[REL_WHEEL];
++    if (axnum != -1) {
++        SetScrollValuator(device, axnum, SCROLL_TYPE_VERTICAL,
++                          -pEvdev->smoothScroll.vert_delta,
++                          SCROLL_FLAG_PREFERRED);
++    }
++
++    axnum = pEvdev->rel_axis_map[REL_DIAL];
++    if (axnum != -1) {
++        SetScrollValuator(device, axnum, SCROLL_TYPE_VERTICAL,
++                          -pEvdev->smoothScroll.dial_delta,
++                          SCROLL_FLAG_NONE);
++    }
++
++    axnum = pEvdev->rel_axis_map[REL_HWHEEL];
++    if (axnum != -1) {
++        SetScrollValuator(device, axnum, SCROLL_TYPE_HORIZONTAL,
++                          pEvdev->smoothScroll.horiz_delta,
++                          SCROLL_FLAG_NONE);
++    }
++#endif
++
++    return Success;
++}
++
++static int
+ EvdevAddRelValuatorClass(DeviceIntPtr device)
+ {
+     InputInfoPtr pInfo;
+@@ -1680,22 +1717,10 @@ EvdevAddRelValuatorClass(DeviceIntPtr device)
+         xf86InitValuatorAxisStruct(device, axnum, atoms[axnum], -1, -1, 1, 0, 1,
+                                    Relative);
+         xf86InitValuatorDefaults(device, axnum);
+-#ifdef HAVE_SMOOTH_SCROLLING
+-        if (axis == REL_WHEEL)
+-            SetScrollValuator(device, axnum, SCROLL_TYPE_VERTICAL,
+-                              -pEvdev->smoothScroll.vert_delta,
+-                              SCROLL_FLAG_PREFERRED);
+-        else if (axis == REL_DIAL)
+-            SetScrollValuator(device, axnum, SCROLL_TYPE_VERTICAL,
+-                              -pEvdev->smoothScroll.dial_delta,
+-                              SCROLL_FLAG_NONE);
+-        else if (axis == REL_HWHEEL)
+-            SetScrollValuator(device, axnum, SCROLL_TYPE_HORIZONTAL,
+-                              pEvdev->smoothScroll.horiz_delta,
+-                              SCROLL_FLAG_NONE);
+-#endif
+     }
+ 
++    EvdevSetScrollValuators(device);
++
+     free(atoms);
+ 
+     return Success;
+@@ -2961,6 +2986,22 @@ EvdevInitProperty(DeviceIntPtr dev)
+                                    PropModeReplace, pEvdev->num_buttons, atoms, FALSE);
+             XISetDevicePropertyDeletable(dev, prop_btn_label, FALSE);
+         }
++
++#ifdef HAVE_SMOOTH_SCROLLING
++        {
++            int smooth_scroll_values[3] = {
++                pEvdev->smoothScroll.vert_delta,
++                pEvdev->smoothScroll.horiz_delta,
++                pEvdev->smoothScroll.dial_delta
++            };
++            prop_scroll_dist = MakeAtom(EVDEV_PROP_SCROLL_DISTANCE,
++                                        strlen(EVDEV_PROP_SCROLL_DISTANCE), TRUE);
++            XIChangeDeviceProperty(dev, prop_scroll_dist, XA_INTEGER, 32,
++                                   PropModeReplace, 3, smooth_scroll_values, FALSE);
++            XISetDevicePropertyDeletable(dev, prop_scroll_dist, FALSE);
++        }
++#endif
++
+     }
+ 
+ }
+@@ -3000,6 +3041,18 @@ EvdevSetProperty(DeviceIntPtr dev, Atom atom, XIPropertyValuePtr val,
+ 
+         if (!checkonly)
+             pEvdev->swap_axes = *((BOOL*)val->data);
++    } else if (atom == prop_scroll_dist)
++    {
++        if (val->format != 32 || val->type != XA_INTEGER || val->size != 3)
++            return BadMatch;
++
++        if (!checkonly) {
++            int *data = (int *)val->data;
++            pEvdev->smoothScroll.vert_delta = data[0];
++            pEvdev->smoothScroll.horiz_delta = data[1];
++            pEvdev->smoothScroll.dial_delta = data[2];
++            EvdevSetScrollValuators(dev);
++        }
+     } else if (atom == prop_axis_label || atom == prop_btn_label ||
+                atom == prop_product_id || atom == prop_device ||
+                atom == prop_virtual)
+-- 
+1.9.3
+

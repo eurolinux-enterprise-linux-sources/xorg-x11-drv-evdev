@@ -1,7 +1,7 @@
-From b7358946467fa2906920afec826f788f0477d793 Mon Sep 17 00:00:00 2001
+From 0ca65f3b8c10a592335187c758e033c10ad1d5c4 Mon Sep 17 00:00:00 2001
 From: Adam Jackson <ajax@redhat.com>
 Date: Thu, 30 Jun 2011 14:19:28 +1000
-Subject: [PATCH evdev] Re-scan RANDR info on lid switches (#618845).
+Subject: [PATCH evdev 1/4] Re-scan RANDR info on lid switches (#618845).
 
 Scan for lid switch devices, translate events on them into RANDR rescans so
 the desktop will pick them up.
@@ -12,10 +12,10 @@ Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
  1 file changed, 65 insertions(+)
 
 diff --git a/src/evdev.c b/src/evdev.c
-index 54772c7..34c2d11 100644
+index af4aba3..87a2cf4 100644
 --- a/src/evdev.c
 +++ b/src/evdev.c
-@@ -35,6 +35,7 @@
+@@ -36,6 +36,7 @@
  
  #include <X11/keysym.h>
  #include <X11/extensions/XI.h>
@@ -23,7 +23,7 @@ index 54772c7..34c2d11 100644
  
  #include <linux/version.h>
  #include <sys/stat.h>
-@@ -1032,9 +1033,43 @@ EvdevProcessSyncEvent(InputInfoPtr pInfo, struct input_event *ev)
+@@ -1045,9 +1046,43 @@ EvdevProcessSyncEvent(InputInfoPtr pInfo, struct input_event *ev)
  
  }
  
@@ -67,7 +67,7 @@ index 54772c7..34c2d11 100644
   */
  static void
  EvdevProcessEvent(InputInfoPtr pInfo, struct input_event *ev)
-@@ -1049,6 +1084,9 @@ EvdevProcessEvent(InputInfoPtr pInfo, struct input_event *ev)
+@@ -1062,6 +1097,9 @@ EvdevProcessEvent(InputInfoPtr pInfo, struct input_event *ev)
          case EV_KEY:
              EvdevProcessKeyEvent(pInfo, ev);
              break;
@@ -77,7 +77,7 @@ index 54772c7..34c2d11 100644
          case EV_SYN:
              EvdevProcessSyncEvent(pInfo, ev);
              break;
-@@ -2057,6 +2095,7 @@ EvdevProbe(InputInfoPtr pInfo)
+@@ -2126,6 +2164,7 @@ EvdevProbe(InputInfoPtr pInfo)
      int i, has_rel_axes, has_abs_axes, has_keys, num_buttons, has_scroll;
      int has_lmr; /* left middle right */
      int has_mt; /* multitouch */
@@ -85,7 +85,7 @@ index 54772c7..34c2d11 100644
      int ignore_abs = 0, ignore_rel = 0;
      EvdevPtr pEvdev = pInfo->private;
      int rc = 1;
-@@ -2091,8 +2130,29 @@ EvdevProbe(InputInfoPtr pInfo)
+@@ -2160,8 +2199,29 @@ EvdevProbe(InputInfoPtr pInfo)
      has_scroll = FALSE;
      has_lmr = FALSE;
      has_mt = FALSE;
@@ -115,7 +115,7 @@ index 54772c7..34c2d11 100644
      /* count all buttons */
      for (i = BTN_MISC; i < BTN_JOYSTICK; i++)
      {
-@@ -2296,6 +2356,11 @@ EvdevProbe(InputInfoPtr pInfo)
+@@ -2378,6 +2438,11 @@ out:
      if (rc)
          xf86IDrvMsg(pInfo, X_WARNING, "Don't know how to use device\n");
  
@@ -128,5 +128,5 @@ index 54772c7..34c2d11 100644
  }
  
 -- 
-1.7.11.2
+1.9.0
 

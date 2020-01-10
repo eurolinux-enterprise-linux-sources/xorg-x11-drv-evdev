@@ -8,8 +8,8 @@
 
 Summary:    Xorg X11 evdev input driver
 Name:       xorg-x11-drv-evdev
-Version:    2.7.3
-Release:    5%{?gitdate:.%{gitdate}git%{gitversion}}%{?dist}
+Version:    2.8.2
+Release:    4%{?gitdate:.%{gitdate}git%{gitversion}}%{?dist}
 URL:        http://www.x.org
 License:    MIT
 Group:      User Interface/X Hardware Support
@@ -24,11 +24,15 @@ Source0:    ftp://ftp.x.org/pub/individual/driver/%{tarball}-%{version}.tar.bz2
 %endif
 Source3:    10-x11-lid.fdi
 
-# Bug 805902 - Scrollwheels on tablets are broken
-Patch02: 0001-Allow-relative-scroll-valuators-on-absolute-devices.patch
-Patch03:  evdev-2.6.0-lid.patch
-Patch04:  evdev-2.6.0-revert-mb-emu-changes.patch
-Patch05:  evdev-2.7.3-0001-Undefine-HAVE_SMOOTH_SCROLLING.patch
+Patch001: 0001-Re-scan-RANDR-info-on-lid-switches-618845.patch
+Patch002: 0002-Revert-Disable-middle-mouse-button-emulation-by-defa.patch
+Patch003: 0003-Use-the-server-s-device-list-for-duplicate-detection.patch
+# Bug 1129947 - regression: Xen Virtual Pointer does not initialize the scroll wheel
+Patch004: 0004-Add-configuration-options-for-smooth-scrolling.patch
+Patch005: 0005-Export-smooth-scroll-settings-as-an-XInput-property.patch
+Patch006: 0006-Map-REL_DIAL-to-horizontal-scrolling-73105.patch
+Patch007: 0007-Fix-axis-initialization-for-devices-with-abs-x-y-and.patch
+Patch008: 0008-If-only-IgnoreRelativeAxes-is-set-init-like-a-normal.patch
 
 ExcludeArch: s390 s390x
 
@@ -48,10 +52,14 @@ X.Org X11 evdev input driver.
 
 %prep
 %setup -q -n %{tarball}-%{?gitdate:%{gitdate}}%{!?gitdate:%{version}}
-%patch02 -p1
-%patch03 -p1
-%patch04 -p1
-%patch05 -p1
+%patch001 -p1
+%patch002 -p1
+%patch003 -p1
+%patch004 -p1
+%patch005 -p1
+%patch006 -p1
+%patch007 -p1
+%patch008 -p1
 
 %build
 autoreconf --force -v --install || exit 1
@@ -96,6 +104,22 @@ X.Org X11 evdev input driver development files.
 
 
 %changelog
+* Thu Aug 14 2014 Peter Hutterer <peter.hutterer@redhat.com> 2.8.2-4
+- Fix Xen Virtual Pointer scroll wheels (#1129947)
+
+* Thu May 08 2014 Peter Hutterer <peter.hutterer@redhat.com> 2.8.2-3
+- Drop undef for HAVE_SMOOTH_SCROLLING. Nothing client-side can make use of
+  this anyway so enabling has no drawbacks but aligns the code with the
+  other products.
+- Don't crash when exceeding MAXDEVICES
+
+* Wed May 07 2014 Peter Hutterer <peter.hutterer@redhat.com> 2.8.2-2
+- Map REL_DIAL to horizontal scrolling again
+- Clean up the patches a bit
+
+* Wed Apr 23 2014 Adam Jackson <ajax@redhat.com> 2.8.2-1
+- evdev 2.8.2
+
 * Thu Nov 01 2012 Peter Hutterer <peter.hutterer@redhat.com> - 2.7.3-5
 - Fix {?dist} tag (#871447)
 

@@ -1,0 +1,150 @@
+From 2ce612e958cc4ed5e99c425061fb7690357096e3 Mon Sep 17 00:00:00 2001
+From: Peter Hutterer <peter.hutterer@who-t.net>
+Date: Tue, 6 May 2014 09:20:05 +1000
+Subject: [PATCH evdev 3/4] Use the server's device list for duplicate
+ detection (#78309)
+
+EvdevAddDevice/EvdevRemoveDevice keep a reference to the device to detect
+duplicate devices based on the dev_t.
+
+EvdevAddDevices was called during PreInit, EvdevRemoveDevice was called during
+DEVICE_CLOSE. That makes it imbalanced if the device succeeds PreInit but the
+server skips everything else because MAX_DEVICES is exceeded. So for all
+devices after MAX_DEVICES, we'd add a reference but never remove it,
+eventually reading/writing past evdev_devices.
+
+The server keeps the list of devices for us anyway, so remove the copy of all
+the pointers and instead run through the device list the server gives us.
+
+X.Org Bug 78309 <http://bugs.freedesktop.org/show_bug.cgi?id=78309>
+
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+Reviewed-by: Hans de Goede <hdegoede@redhat.com>
+(cherry picked from commit 13dea90bc8ef2a2e6f55fb5ff5f54afe41d22f95)
+(cherry picked from commit 62010287ebd8a72902630e3ba72e643f1f145c3c)
+---
+ src/evdev.c | 74 +++++++++++--------------------------------------------------
+ 1 file changed, 13 insertions(+), 61 deletions(-)
+
+diff --git a/src/evdev.c b/src/evdev.c
+index 87a2cf4..84df880 100644
+--- a/src/evdev.c
++++ b/src/evdev.c
+@@ -66,11 +66,6 @@
+ /* removed from server, purge when dropping support for server 1.10 */
+ #define XI86_SEND_DRAG_EVENTS   0x08
+ 
+-#ifndef MAXDEVICES
+-#include <inputstr.h> /* for MAX_DEVICES */
+-#define MAXDEVICES MAX_DEVICES
+-#endif
+-
+ #define ArrayLength(a) (sizeof(a) / (sizeof((a)[0])))
+ 
+ #define MIN_KEYCODE 8
+@@ -139,11 +134,6 @@ static Atom prop_btn_label;
+ static Atom prop_device;
+ static Atom prop_virtual;
+ 
+-/* All devices the evdev driver has allocated and knows about.
+- * MAXDEVICES is safe as null-terminated array, as two devices (VCP and VCK)
+- * cannot be used by evdev, leaving us with a space of 2 at the end. */
+-static EvdevPtr evdev_devices[MAXDEVICES] = {NULL};
+-
+ static int EvdevSwitchMode(ClientPtr client, DeviceIntPtr device, int mode)
+ {
+     InputInfoPtr pInfo;
+@@ -226,60 +216,25 @@ static BOOL
+ EvdevIsDuplicate(InputInfoPtr pInfo)
+ {
+     EvdevPtr pEvdev = pInfo->private;
+-    EvdevPtr* dev   = evdev_devices;
++    InputInfoPtr d;
+ 
+-    if (pEvdev->min_maj)
++    nt_list_for_each_entry(d, xf86FirstLocalDevice(), next)
+     {
+-        while(*dev)
+-        {
+-            if ((*dev) != pEvdev &&
+-                (*dev)->min_maj &&
+-                (*dev)->min_maj == pEvdev->min_maj)
+-                return TRUE;
+-            dev++;
+-        }
++        EvdevPtr e;
++
++        if (strcmp(d->drv->driverName, "evdev") != 0)
++            continue;
++
++        e = (EvdevPtr)d->private;
++        if (e != pEvdev &&
++            e->min_maj &&
++            e->min_maj == pEvdev->min_maj)
++            return TRUE;
+     }
++
+     return FALSE;
+ }
+ 
+-/**
+- * Add to internal device list.
+- */
+-static void
+-EvdevAddDevice(InputInfoPtr pInfo)
+-{
+-    EvdevPtr pEvdev = pInfo->private;
+-    EvdevPtr* dev = evdev_devices;
+-
+-    while(*dev)
+-        dev++;
+-
+-    *dev = pEvdev;
+-}
+-
+-/**
+- * Remove from internal device list.
+- */
+-static void
+-EvdevRemoveDevice(InputInfoPtr pInfo)
+-{
+-    EvdevPtr pEvdev = pInfo->private;
+-    EvdevPtr *dev   = evdev_devices;
+-    int count       = 0;
+-
+-    while(*dev)
+-    {
+-        count++;
+-        if (*dev == pEvdev)
+-        {
+-            memmove(dev, dev + 1,
+-                    sizeof(evdev_devices) - (count * sizeof(EvdevPtr)));
+-            break;
+-        }
+-        dev++;
+-    }
+-}
+-
+ static BOOL
+ EvdevDeviceIsVirtual(const char* devicenode)
+ {
+@@ -2002,7 +1957,6 @@ EvdevProc(DeviceIntPtr device, int what)
+ 	xf86IDrvMsg(pInfo, X_INFO, "Close\n");
+         EvdevCloseDevice(pInfo);
+         EvdevFreeMasks(pEvdev);
+-        EvdevRemoveDevice(pInfo);
+         pEvdev->min_maj = 0;
+ 	break;
+ 
+@@ -2696,8 +2650,6 @@ EvdevPreInit(InputDriverPtr drv, InputInfoPtr pInfo, int flags)
+                                          pInfo->type_name);
+     pInfo->type_name = pEvdev->type_name;
+ 
+-    EvdevAddDevice(pInfo);
+-
+     if (pEvdev->flags & EVDEV_BUTTON_EVENTS)
+     {
+         EvdevMBEmuPreInit(pInfo);
+-- 
+1.9.0
+

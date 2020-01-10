@@ -1,12 +1,377 @@
-commit 777cfa148f8b5febaab1330e8df791f2188c046b
+commit 51575b60b14d414490d31ff23f07c30431525667
 Author: Peter Hutterer <peter.hutterer@who-t.net>
-Date:   Mon Aug 13 16:22:00 2012 +1000
+Date:   Mon Oct 7 09:23:09 2013 +1100
 
-    evdev 2.7.3
+    evdev 2.8.2
     
     Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
 
-commit 447fd220e05752ec9ab388cc78826c297e1b7e24
+commit f285567d372514d31096cc25a467d5d2e182885a
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Tue Aug 13 14:44:26 2013 +1000
+
+    Write a SYN_REPORT after the last LED
+    
+    When writing LED values to the device, append a SYN_REPORT to the list to
+    ensure other clients are updated immediately. Otherwise, the LED events
+    will be queued and not sent to other clients until the next input event
+    arrives.
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+    Reviewed-by: Daniel Stone <daniel@fooishbar.org>
+    (cherry picked from commit 27926b3763e525470ec8e4ac9a97aa0e02f1dd95)
+
+commit af1d0858775dd130c59de921210a114580fef719
+Author: Peter De Wachter <pdewacht@gmail.com>
+Date:   Wed Mar 20 00:35:45 2013 +0100
+
+    Map REL_DIAL to vertical scrolling
+    
+    This makes the absolute axis codepath behave the same as the relative axis
+    path.
+    
+    Signed-off-by: Peter De Wachter <pdewacht@gmail.com>
+    Reviewed-by: Peter Hutterer <peter.hutterer@who-t.net>
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+    (cherry picked from commit 54a3120e339e55fc4721543abb15692c3e9ede09)
+
+commit 8a9b1ec6b58a36910a03f3e8b1f9bc8d91f87204
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Thu Jul 11 11:09:24 2013 +1000
+
+    evdev 2.8.1
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 356565111a6bb98f15fbaaf4f527aed8c87b477b
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Thu Jun 27 05:47:38 2013 +1000
+
+    Don't allow a wheel emulation inertia of 0 (#66125)
+    
+    Inertia of 0 results in an infinite loop of events being sent to the server.
+    
+    X.Org Bug 66125 <http://bugs.freedesktop.org/show_bug.cgi?id=66125>
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit fff3a60fbf5c81b337ae4eaf160feacdfc8c2465
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Wed May 29 13:26:57 2013 +1000
+
+    Use EvdevBitIsSet, not the server's BitIsOn
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 8f209ac60d10ba61aa6ea2bec02dbfa54ebe8f17
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Wed May 29 07:18:19 2013 +1000
+
+    Drop cached name and led_bitmask - nothing reads this
+    
+    Both fields are write-only as of xf86-input-evdev-2.5.99.902-1-g1ced7ec
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit a0d41af8969b91ec51ebdfb966ccc47e5c40329a
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Mon May 27 10:19:15 2013 +1000
+
+    Switch default model to pc104.
+    
+    As of xkeyboard-config 1.9, the evdev model is hidden (c887d2876)
+    The server switched to pc105 with version 1.8 (1df4bd601).
+    
+    The evdev model resolves to pc104 anyway, so this commit has no real effect
+    other than to switch from a catch-all rule to explicit.
+    Use pc104 so this is easy to find for those investigating the code and
+    wondering why. pc104 is the 'correct' geometry for the us layout, which is
+    the default after all. Switching to pc105 would show keys missing if no
+    model is set (e.g. on uk/de layouts) but it would be the wrong layout for
+    the default.
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+    Acked-by: Daniel Stone <daniel@fooishbar.org>
+
+commit dea1d1a3906b98b491e9760b3304f881c6afec5e
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Mon Apr 29 11:48:12 2013 +1000
+
+    Fail to set up axes for devices that only have MT axes but no ABS_X/Y equivalents (#64029)
+    
+    The kernel should give us ABS_X/Y for backwards compat but some devices
+    don't. For now, ignore these devices as evdev is not suited to handle this
+    yet and will crash if a device is set up without axes (i.e.
+    pEvdev->vals == NULL) and later receives an event from an MT axis.
+    
+    X.Org Bug 64029 <http://bugs.freedesktop.org/show_bug.cgi?id=64029>
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+    Reviewed-by: Benjamin Tissoires <benjamin.tissoires@gmail.com>
+
+commit b59a1a25dad4437e013ce8d3d65d4591c6f4ee4a
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Tue Apr 2 14:12:26 2013 +1000
+
+    Add option TypeName (#62831)
+    
+    evdev tries to assign the right XI 1.x type-name based on various device
+    capabilities. In some cases, that fails. e.g. the Mionix Naos 5000 mouse
+    looks like a keyboard. And we assign a keyboard type in that case since
+    there are plenty of keyboards that also advertise some axes or others.
+    
+    Add a new option TypeName to allow for system-wide configuration of such
+    devices in a quirks file.
+    
+    This can also be used to address #55867
+    
+    X.Org Bug 62831 <http://bugs.freedesktop.org/show_bug.cgi?id=62831>
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 5138cd2ff47a1a28db82688b932cb1ecd618778f
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Tue Mar 26 16:01:39 2013 +1000
+
+    evdev 2.8.0
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit c085c8b6c1f8e95f6f4d91bc65268fe57154018c
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Tue Feb 12 12:58:08 2013 +1000
+
+    Return BadValue if EvdevOpenMTDev fails
+    
+    FALSE == Success, so if we fail during EvdevOpenMTDev, the caller thinks
+    that everything worked fine, proceeds to set up the fd, etc.
+    
+    This may later cause a crash, when a device comes back later as different
+    device and posts axis events where we didn't configure axes in the first
+    place.
+    
+    Note: Unclear why there was no udev event received for the device being
+    removed and coming back as different device though.
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 2b675f85aef6df3bb3fb5e68648982e11b752764
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Tue Feb 12 12:48:38 2013 +1000
+
+    Make errors on EVIOCGBIT more obvious
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 2b8b0df62ec554952784f2820fb4143c495232b0
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Thu Jan 24 16:18:48 2013 +1000
+
+    Always init axis mapping for the first two rel axes (#59784)
+    
+    Fixes regression introduced in 2f67509b53b27dd7f51ca2aadd19605aee613a61.
+    
+    If evdev is used for touchpads, the abs axis movement is converted to a rel
+    movement. Without the two relative axes initialized, the events are
+    discarded.
+    
+    Axes 0 and 1 are always x/y anyway unless specifically configured otherwise.
+    
+    X.Org Bug 59784 <http://bugs.freedesktop.org/show_bug.cgi?id=59784>
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit bb9b4146cb828bd366675e8736fc145e92c9269a
+Merge: f5fe533 67e5376
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Fri Jan 25 11:12:05 2013 +1000
+
+    Merge branch 'touch-axis-swap'
+
+commit f5fe533f1bef0c636b98658aaf40748c219c9879
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Tue Mar 27 12:18:46 2012 +1000
+
+    Allow relative scroll valuators on absolute devices (#54387)
+    
+    Special-case RHEL_WHEEL, RHEL_HWHEEL and REL_DIAL to add scroll valuators
+    for those axes in addition to the absolute axes.
+    
+    X.Org Bug 54387 <http://bugs.freedesktop.org/show_bug.cgi?id=54387>
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 2f67509b53b27dd7f51ca2aadd19605aee613a61
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Wed Jan 16 08:38:52 2013 +1000
+
+    Split rel and abs axis mapping into two separate arrays
+    
+    This will enable a device to have relative scrolling axes in addition to
+    absolute axes (required by the QEMU tablet).
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit ffc0a34642d5ab573c2ae63c873a5befd8688493
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Tue Jan 15 16:15:47 2013 +1000
+
+    Move some stuff into the new alloc function
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 93de7b0b73d4c5f6f68e3a2ffe8f76b5212ee016
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Tue Jan 15 16:11:16 2013 +1000
+
+    Move allocation of EvdevRec into a helper function
+    
+    Makes it easier to initialise everything to the right values.
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 9ec9d214d072ef4aaffb65b5575eff58edcb62ed
+Author: Colin Walters <walters@verbum.org>
+Date:   Wed Jan 4 17:37:06 2012 -0500
+
+    autogen.sh: Implement GNOME Build API
+    
+    http://people.gnome.org/~walters/docs/build-api.txt
+    
+    Signed-off-by: Adam Jackson <ajax@redhat.com>
+
+commit 94e6df8f5f6048b8d0c7aa34efe1c0dc70b997d1
+Author: Adam Jackson <ajax@redhat.com>
+Date:   Wed Jan 16 13:11:11 2013 -0500
+
+    configure: Drop AM_MAINTAINER_MODE
+    
+    Signed-off-by: Adam Jackson <ajax@redhat.com>
+
+commit 67e5376aaa62a1586fee37d610b3ad7e3b8bbcab
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Mon Jan 14 14:45:58 2013 +1000
+
+    Handle axis swap, calibration, and inversion for touch events (#59340)
+    
+    X.Org Bug 59340 <http://bugs.freedesktop.org/show_bug.cgi?id=59340>
+    
+    Reported-by: Bastien Nocera <hadess@hadess.net>
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 2432626b70b7f55a337bcfdc9ba415811634c062
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Mon Jan 14 14:10:14 2013 +1000
+
+    Move calibration adjustments to helper function
+    
+    No functional changes.
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 069c035ab0787e6841159929199ae58502d89c4b
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Mon Jan 14 14:07:26 2013 +1000
+
+    Move valuator swapping into a helper function
+    
+    No functional changes.
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 3b7ba39fcaf261f800205fd6cf45fea9998529e5
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Mon Jan 14 14:03:54 2013 +1000
+
+    Localise tmp variable
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 454194f4b530af5d7f92a3b28c28495b4faac547
+Author: Mauro Carvalho Chehab <mchehab@redhat.com>
+Date:   Tue Jan 8 15:04:07 2013 +1000
+
+    Force a button if MT axes are present and it is not a gamepad
+    
+    We expect at least BTN_TOUCH for anything with MT axes, but devices that
+    don't have that need a button class regardless. Some gamepads define
+    MT axes but no buttons, causing a bug in the server when they post a
+    TouchBegin.
+    
+    [ 97436.293] (EE) BUG: triggered 'if (!b || !v)'
+    [ 97436.293] (EE) BUG: exevents.c:929 in UpdateDeviceState()
+    
+    So, ignore it, if it is a joystick (e. g. if it have BTN_JOYSTICK defined).
+    Otherwise, fake a button.
+    
+    This patch basically merges two patches written by Peter Hutterer
+    <peter.hutterer@who-t.net>.
+    
+    Signed-off-by: Mauro Carvalho Chehab <mchehab@redhat.com>
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 00341e632c89e14a83a55e3578b8bb2684ce4ae2
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Mon Jan 7 10:20:52 2013 +1000
+
+    Drop special XKB option handling
+    
+    This isn't actually needed at all.
+    
+    xf86nameCompare() will skip over underscores and is case-independent. So
+    xf86SetStrOption("foo_bar") will return an Option "FooBar" and vice versa.
+    
+    The server won't return a zero-length string either, it'll return
+    NULL and spit a warning to the log.
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit f2d2b65343a902c5eedaf50b6f6bcb5ba1ef9c4a
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Mon Jan 7 09:14:42 2013 +1000
+
+    Localise XKB initialization
+    
+    No need to store this in the evdev struct.
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 0d6c6b59c153cb53b53d6860387b4fe40d245628
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Fri Nov 30 10:32:47 2012 +1000
+
+    If stat fails, pretend it's not a virtual device
+    
+    If stat fails while checking if the device is virtual, just say "no, it's
+    not virtual" and continue. If the device really went away, it'll be removed
+    through other means.
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit c263d6e46d76b3e54570da637b1e7352437bb59d
+Author: Benjamin Tissoires <benjamin.tissoires@gmail.com>
+Date:   Fri Oct 26 16:27:35 2012 +0200
+
+    Add missing mt axis labels
+    
+    update evdev according to latest changes in input.h
+    
+    Signed-off-by: Benjamin Tissoires <benjamin.tissoires@gmail.com>
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 5af11b675242b2971f47c42a57b892dc24eb1917
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Fri May 25 13:39:32 2012 +1000
+
+    Use LogMessageVerbSigSafe if available
+    
+    Messages logged during the signal handler should use LogMessageVerbSigSafe
+    as of ABI 18.
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+    Reviewed-by: Chase Douglas <chase.douglas@canonical.com>
+
+commit 33e7831b5fabc5c9dcc0224800a04761086952a7
 Author: Peter Hutterer <peter.hutterer@who-t.net>
 Date:   Tue Aug 7 14:32:17 2012 +1000
 
@@ -18,9 +383,8 @@ Date:   Tue Aug 7 14:32:17 2012 +1000
     X.Org Bug 53168 <http://bugs.freedesktop.org/show_bug.cgi?id=53168>
     
     Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
-    (cherry picked from commit 33e7831b5fabc5c9dcc0224800a04761086952a7)
 
-commit f2c6da02429eaabf9111d54c41bf46aa19b49776
+commit bc8997e8120cc8d4f33f44e0734fa488f9fef3b0
 Author: Peter Hutterer <peter.hutterer@who-t.net>
 Date:   Sun Aug 5 12:26:38 2012 +1000
 
@@ -35,9 +399,8 @@ Date:   Sun Aug 5 12:26:38 2012 +1000
     
     Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
     Reviewed-by: Chase Douglas <chase.douglas@canonical.com>
-    (cherry picked from commit bc8997e8120cc8d4f33f44e0734fa488f9fef3b0)
 
-commit 9791afc4c16eab92f30884a7e616dd93ac9b7513
+commit 1cb8f074df8d16879ec80d778d26fb5b9af05a3b
 Author: Peter Hutterer <peter.hutterer@who-t.net>
 Date:   Tue Jul 31 16:39:00 2012 +1000
 
@@ -52,17 +415,25 @@ Date:   Tue Jul 31 16:39:00 2012 +1000
     
     Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
     Reviewed-by: Chase Douglas <chase.douglas@canonical.com>
-    (cherry picked from commit 1cb8f074df8d16879ec80d778d26fb5b9af05a3b)
 
-commit f1ee12b9a363028c0d0a6668fca9eeb011f2354d
+commit 4eacb581fb71eaf515ec67af0f206126d8328043
 Author: Peter Hutterer <peter.hutterer@who-t.net>
-Date:   Fri Aug 3 16:00:31 2012 +1000
+Date:   Wed Jul 4 10:12:10 2012 +1000
 
-    evdev 2.7.2
+    Only use mtdev for multitouch devices
+    
+    mtdev uses a chunk of memory per device (~41kB), mainly for for its
+    internal event buffers. The average box these days can easily have 10
+    devices, but only few of those are multitouch. So check if we have
+    ABS_MT_POSITION axes and only create an mtdev instance if we do.
+    
+    If a device has multitouch axes but not x/y, we will ignore events from this
+    device now.
     
     Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+    Reviewed-by: Chase Douglas <chase.douglas@canonical.com>
 
-commit 74690817fcd3e91ea384b8f311d8ce5626d8c409
+commit 98af2003d48530b2e102cf667a9d40dcb94cb0fe
 Author: Peter Hutterer <peter.hutterer@who-t.net>
 Date:   Wed Jul 4 09:14:41 2012 +1000
 
@@ -87,9 +458,39 @@ Date:   Wed Jul 4 09:14:41 2012 +1000
     
     Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
     Reviewed-by: Chase Douglas <chase.douglas@canonical.com>
-    (cherry picked from commit 98af2003d48530b2e102cf667a9d40dcb94cb0fe)
 
-commit b2cbbb178e9a3650118bdf498e678ca4e12062fe
+commit f5ede98085688b59dc56a9cc6592f75552a4e7ed
+Author: Daniel Stone <daniel@fooishbar.org>
+Date:   Tue Jul 10 00:34:56 2012 +0100
+
+    Fix compilation warnings for non-multitouch builds
+    
+    Signed-off-by: Daniel Stone <daniel@fooishbar.org>
+    Reviewed-by: Chase Douglas <chase.douglas@canonical.com>
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit ff926d15b8176c5e90fced23bb1aa041c3dca20e
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Fri Mar 30 11:21:23 2012 +1000
+
+    Move axis labels into a separate header file
+    
+    Just to unclutter the code
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit b0e3c8f97809c8e323783ded0d308c6f0b7729ff
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Thu Mar 29 09:25:43 2012 +1000
+
+    Split initializing one axis label out into a helper function
+    
+    We need this for mixed axis devices. No functional changes.
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+    Reviewed-by: Chase Douglas <chase.douglas@canonical.com>
+
+commit 9624f4e2ba7d1973813de066806eed108748a53a
 Author: Peter Hutterer <peter.hutterer@who-t.net>
 Date:   Mon May 28 10:08:23 2012 +1000
 
@@ -100,53 +501,19 @@ Date:   Mon May 28 10:08:23 2012 +1000
     
     Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
     Reviewed-by: Chase Douglas <chase.douglas@canonical.com>
-    (cherry picked from commit 9624f4e2ba7d1973813de066806eed108748a53a)
 
-commit 7d91fc7bfcdaaac657aeb7b8876a4002ad0fa68d
-Author: Marcin Slusarz <marcin.slusarz@gmail.com>
-Date:   Mon May 21 01:22:33 2012 +0200
-
-    Fix some obvious constness-related compile warnings.
-    
-    Signed-off-by: Marcin Slusarz <marcin.slusarz@gmail.com>
-    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
-    (cherry picked from commit 2c8da280b3ab635d049784345d025d289348687b)
-
-commit 09987eab9a77aa94127ecacca41498bc5e83c0eb
-Author: Daniel Stone <daniel@fooishbar.org>
-Date:   Tue Jul 10 00:34:56 2012 +0100
-
-    Fix compilation warnings for non-multitouch builds
-    
-    Signed-off-by: Daniel Stone <daniel@fooishbar.org>
-    Reviewed-by: Chase Douglas <chase.douglas@canonical.com>
-    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
-    (cherry picked from commit f5ede98085688b59dc56a9cc6592f75552a4e7ed)
-
-commit 8af0e6f1ebaf327f735bca507134b34bb24b26c6
+commit 047955f51e013c190bb09ba0c03ca2c160f34997
 Author: Peter Hutterer <peter.hutterer@who-t.net>
-Date:   Fri May 25 14:04:22 2012 +1000
+Date:   Mon May 28 09:50:57 2012 +1000
 
-    strtol doesn't need a empty string, NULL is good enough.
+    Move duplicate check up before mtdev allocation
     
-    Fixes:
-    evdev.c: In function 'EvdevInitButtonMapping':
-    evdev.c:1659:25: warning: initialization discards 'const' qualifier from
-    pointer target type [enabled by default]
+    No need to alloc mtdev if we then find out the fd is a duplicate one anyway.
     
     Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
     Reviewed-by: Chase Douglas <chase.douglas@canonical.com>
-    (cherry picked from commit 61faf2e6e70a4c9ecffe638d46829738dc2e3452)
 
-commit 56e9a7a248d70fd55ecc3588e72d0172d7c9ad27
-Author: Peter Hutterer <peter.hutterer@who-t.net>
-Date:   Tue Jul 24 14:05:09 2012 +1000
-
-    evdev 2.7.1
-    
-    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
-
-commit 7df65237741b167b18ff0962a7bfc3db9d4826ed
+commit 8251d7a8ec00b4160b6601a6f2f4f0f5d461cbee
 Author: Peter Hutterer <peter.hutterer@who-t.net>
 Date:   Mon May 28 09:50:15 2012 +1000
 
@@ -154,9 +521,8 @@ Date:   Mon May 28 09:50:15 2012 +1000
     
     Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
     Reviewed-by: Chase Douglas <chase.douglas@canonical.com>
-    (cherry picked from commit 8251d7a8ec00b4160b6601a6f2f4f0f5d461cbee)
 
-commit f4e76a4c53f2abe0bd737485e0b32d6d36425118
+commit ac5173163d7d1e18d47630a397ece0f26b2568c8
 Author: Peter Hutterer <peter.hutterer@who-t.net>
 Date:   Mon May 28 09:08:43 2012 +1000
 
@@ -170,9 +536,31 @@ Date:   Mon May 28 09:08:43 2012 +1000
     Reported-by: Zdenek Kabelac <zdenek.kabelac@gmail.com>
     Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
     Reviewed-by: Chase Douglas <chase.douglas@canonical.com>
-    (cherry picked from commit ac5173163d7d1e18d47630a397ece0f26b2568c8)
 
-commit ac772cde9469c406564433d6d41416fa2279fbf9
+commit 61faf2e6e70a4c9ecffe638d46829738dc2e3452
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Fri May 25 14:04:22 2012 +1000
+
+    strtol doesn't need a empty string, NULL is good enough.
+    
+    Fixes:
+    evdev.c: In function 'EvdevInitButtonMapping':
+    evdev.c:1659:25: warning: initialization discards 'const' qualifier from
+    pointer target type [enabled by default]
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+    Reviewed-by: Chase Douglas <chase.douglas@canonical.com>
+
+commit 7f3f98be7f6585de3051ade6d5447acd378b572f
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Fri May 25 13:42:05 2012 +1000
+
+    Use xf86IDrvMsg in emuMB.c instead of ErrorF
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+    Reviewed-by: Chase Douglas <chase.douglas@canonical.com>
+
+commit 4145fe1c087708bf5d6608e328342282ecb93ab0
 Author: Chase Douglas <chase.douglas@canonical.com>
 Date:   Wed Jun 6 12:07:12 2012 -0700
 
@@ -185,9 +573,8 @@ Date:   Wed Jun 6 12:07:12 2012 -0700
     
     Signed-off-by: Chase Douglas <chase.douglas@canonical.com>
     Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
-    (cherry picked from commit 4145fe1c087708bf5d6608e328342282ecb93ab0)
 
-commit 774915924102c348ce7045ffa07905d1079f447c
+commit 9ce068e760e1282183c7aa1b4cc6b0fcb6b494dd
 Author: Chase Douglas <chase.douglas@canonical.com>
 Date:   Thu May 24 10:48:38 2012 -0700
 
@@ -199,9 +586,17 @@ Date:   Thu May 24 10:48:38 2012 -0700
     
     Signed-off-by: Chase Douglas <chase.douglas@canonical.com>
     Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
-    (cherry picked from commit 9ce068e760e1282183c7aa1b4cc6b0fcb6b494dd)
 
-commit 833fc517d75934797bdadbf043b18a1c94fc1293
+commit 2c8da280b3ab635d049784345d025d289348687b
+Author: Marcin Slusarz <marcin.slusarz@gmail.com>
+Date:   Mon May 21 01:22:33 2012 +0200
+
+    Fix some obvious constness-related compile warnings.
+    
+    Signed-off-by: Marcin Slusarz <marcin.slusarz@gmail.com>
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit f28507e8ce2bd45b51c28f024baebd9711c28fc3
 Author: Peter Hutterer <peter.hutterer@who-t.net>
 Date:   Fri Apr 27 15:42:17 2012 +1000
 
@@ -216,9 +611,8 @@ Date:   Fri Apr 27 15:42:17 2012 +1000
     
     Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
     Reviewed-by: Chase Douglas <chase.douglas@canonical.com>
-    (cherry picked from commit f28507e8ce2bd45b51c28f024baebd9711c28fc3)
 
-commit 4d698d8ece86a8e39b41c03b9b4c427b20b15449
+commit 99340147b9092a5aaec997eca407282a51e1f063
 Author: Peter Hutterer <peter.hutterer@who-t.net>
 Date:   Thu Mar 15 15:46:32 2012 +1000
 
@@ -230,7 +624,6 @@ Date:   Thu Mar 15 15:46:32 2012 +1000
     
     Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
     Reviewed-by: Chase Douglas <chase.douglas@canonical.com>
-    (cherry picked from commit 99340147b9092a5aaec997eca407282a51e1f063)
 
 commit 76b1d58a9791257fa8b4e6d3322fcb082c86b18a
 Author: Peter Hutterer <peter.hutterer@who-t.net>

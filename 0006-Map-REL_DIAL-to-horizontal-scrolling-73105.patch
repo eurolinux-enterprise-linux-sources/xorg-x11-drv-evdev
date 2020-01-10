@@ -1,0 +1,49 @@
+From bb12f4be03cee167c7c036493ef4cfd95a77fb6d Mon Sep 17 00:00:00 2001
+From: Peter Hutterer <peter.hutterer@who-t.net>
+Date: Mon, 28 Apr 2014 12:23:18 +1000
+Subject: [PATCH evdev 6/8] Map REL_DIAL to horizontal scrolling (#73105)
+
+This was the original behavior introduced in
+f77410e1f97d394e98c854fd174f712666b0544c and stayed that way until smooth
+scrolling erroneously added it as vertical axis in
+b450efdf95999cad08de23ce069f04a66bdae24b. Revert to horizontal scrolling to
+restore the previous behaviour - which unbreaks scrolling on Microsoft mice.
+
+This effectively reverts 54a3120e339e55fc4721543abb15692c3e9ede09 too.
+
+X.Org Bug 73105 <http://bugs.freedesktop.org/show_bug.cgi?id=73105>
+
+Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+---
+ src/evdev.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/src/evdev.c b/src/evdev.c
+index ffe672d..cb0b154 100644
+--- a/src/evdev.c
++++ b/src/evdev.c
+@@ -1541,8 +1541,8 @@ EvdevAddAbsValuatorClass(DeviceIntPtr device, int want_scroll_axes)
+                                        NO_AXIS_LIMITS, NO_AXIS_LIMITS,
+                                        0, 0, 0, Relative);
+             SetScrollValuator(device, pEvdev->rel_axis_map[idx],
+-                              SCROLL_TYPE_VERTICAL,
+-                              -pEvdev->smoothScroll.dial_delta,
++                              SCROLL_TYPE_HORIZONTAL,
++                              pEvdev->smoothScroll.dial_delta,
+                               SCROLL_FLAG_NONE);
+         }
+     }
+@@ -1619,8 +1619,8 @@ EvdevSetScrollValuators(DeviceIntPtr device)
+ 
+     axnum = pEvdev->rel_axis_map[REL_DIAL];
+     if (axnum != -1) {
+-        SetScrollValuator(device, axnum, SCROLL_TYPE_VERTICAL,
+-                          -pEvdev->smoothScroll.dial_delta,
++        SetScrollValuator(device, axnum, SCROLL_TYPE_HORIZONTAL,
++                          pEvdev->smoothScroll.dial_delta,
+                           SCROLL_FLAG_NONE);
+     }
+ 
+-- 
+1.9.3
+
