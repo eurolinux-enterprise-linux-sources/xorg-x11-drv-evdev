@@ -8,8 +8,8 @@
 
 Summary:    Xorg X11 evdev input driver
 Name:       xorg-x11-drv-evdev
-Version:    2.8.2
-Release:    4%{?gitdate:.%{gitdate}git%{gitversion}}%{?dist}
+Version:    2.9.2
+Release:    1%{?gitdate:.%{gitdate}git%{gitversion}}%{?dist}
 URL:        http://www.x.org
 License:    MIT
 Group:      User Interface/X Hardware Support
@@ -26,26 +26,19 @@ Source3:    10-x11-lid.fdi
 
 Patch001: 0001-Re-scan-RANDR-info-on-lid-switches-618845.patch
 Patch002: 0002-Revert-Disable-middle-mouse-button-emulation-by-defa.patch
-Patch003: 0003-Use-the-server-s-device-list-for-duplicate-detection.patch
-# Bug 1129947 - regression: Xen Virtual Pointer does not initialize the scroll wheel
-Patch004: 0004-Add-configuration-options-for-smooth-scrolling.patch
-Patch005: 0005-Export-smooth-scroll-settings-as-an-XInput-property.patch
-Patch006: 0006-Map-REL_DIAL-to-horizontal-scrolling-73105.patch
-Patch007: 0007-Fix-axis-initialization-for-devices-with-abs-x-y-and.patch
-Patch008: 0008-If-only-IgnoreRelativeAxes-is-set-init-like-a-normal.patch
 
 ExcludeArch: s390 s390x
 
 BuildRequires: autoconf automake libtool
 BuildRequires: xorg-x11-server-sdk >= 1.10.99.902
 BuildRequires: libxkbfile-devel libudev-devel
-BuildRequires: mtdev-devel
+BuildRequires: mtdev-devel libevdev-devel
 BuildRequires: xorg-x11-util-macros >= 1.17
 Requires:  Xorg %(xserver-sdk-abi-requires ansic)
 Requires:  Xorg %(xserver-sdk-abi-requires xinput)
 Requires:  xkeyboard-config >= 1.4-1
 Requires: libudev
-Requires: mtdev
+Requires: mtdev libevdev
 
 %description 
 X.Org X11 evdev input driver.
@@ -54,12 +47,6 @@ X.Org X11 evdev input driver.
 %setup -q -n %{tarball}-%{?gitdate:%{gitdate}}%{!?gitdate:%{version}}
 %patch001 -p1
 %patch002 -p1
-%patch003 -p1
-%patch004 -p1
-%patch005 -p1
-%patch006 -p1
-%patch007 -p1
-%patch008 -p1
 
 %build
 autoreconf --force -v --install || exit 1
@@ -104,6 +91,12 @@ X.Org X11 evdev input driver development files.
 
 
 %changelog
+* Wed Nov 25 2015 Peter Hutterer <peter.hutterer@redhat.com> 2.9.2-1
+- evdev 2.9.2 (#1248582)
+
+* Wed Nov 11 2015 Adam Jackson <ajax@redhat.com> 2.8.2-5
+- Rebuild for server 1.17
+
 * Thu Aug 14 2014 Peter Hutterer <peter.hutterer@redhat.com> 2.8.2-4
 - Fix Xen Virtual Pointer scroll wheels (#1129947)
 

@@ -1,12 +1,376 @@
-commit 51575b60b14d414490d31ff23f07c30431525667
+commit 24368d8379cc47693dd1623168a6125faff57311
 Author: Peter Hutterer <peter.hutterer@who-t.net>
-Date:   Mon Oct 7 09:23:09 2013 +1100
+Date:   Fri Mar 27 11:37:03 2015 +1000
 
-    evdev 2.8.2
+    evdev 2.9.2
     
     Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
 
-commit f285567d372514d31096cc25a467d5d2e182885a
+commit 4996694cc9b80ffef28289ea491965b16615f2d1
+Author: Tobias Himmer <provisorisch@online.de>
+Date:   Fri Jan 23 02:13:17 2015 +0100
+
+    Check for incoming MT slot indices exceeding the allocated number of slots.
+    
+    Fixes: https://bugs.freedesktop.org/show_bug.cgi?id=88715
+    
+    Signed-off-by: Tobias Himmer <provisorisch@online.de>
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+    (cherry picked from commit abc4a8b60387c3c9ae8b0199bf61acede4f6dba2)
+
+commit 05f7057ad5716ccf643b80f2f5fbfff34783a950
+Author: Colin B. Macdonald <macdonald@maths.ox.ac.uk>
+Date:   Thu Jun 26 12:17:59 2014 +0100
+
+    Workaround lack of ABS_X on MT devices (#80470)
+    
+    Often on Android, we have ABS_MT_POSITION_X without ABS_X (which is contrary
+    to spec). We add fake ABS_X axis in that case.
+    
+    X.Org Bug 80470 <http://bugs.freedesktop.org/show_bug.cgi?id=80470>
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+    (cherry picked from commit b370ccdff8f721de75d3d91486cc4807668d040c)
+
+commit cb3b023783fe73d9bbb7c9c6ba6c73048b8303ef
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Wed Nov 26 09:23:39 2014 +1000
+
+    evdev 2.9.1
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 124eff9ba20c5ae777a6a5aa36f32112ad31b931
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Fri Nov 7 13:41:06 2014 +1000
+
+    Remove three unused #defines
+    
+    Obsolete since 768c25a99b2f4ec07993eb15a0f05a5e22b5c695
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 605047613c534babf723f25597e8cc4be6758db0
+Author: Éric Brunet <Eric.Brunet@lps.ens.fr>
+Date:   Sat Sep 27 22:06:36 2014 +0200
+
+    Don't pass superfluous arguments to EvdevPost*Events
+    
+    The functions EvdevPostProximityEvents, EvdevPostRelativeMotionEvents,
+    EvdevPostAbsoluteMotionEvents and EvdevPostQueuedEvents are only called
+    by EvdevProcessSyncEvent. These functions take as arguments an array of
+    valuators which is set by EvdevProcessSyncEvent to contain ... nothing.
+    This patch changes the prototype of the four functions, their definitions
+    and the way they are called  to remove the useless array of valuators.
+    
+    Signed-off-by: Éric Brunet <Eric.Brunet@lps.ens.fr>
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 3ee98d0b7f7c266b8c7954b7710f9724a9c9cddd
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Fri Aug 29 13:14:56 2014 +1000
+
+    Drop some unused #defines
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 977588d24a6bc511454c7bd616e8b24a8bc3f58e
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Thu Aug 14 11:56:03 2014 +1000
+
+    If only IgnoreRelativeAxes is set, init like a normal relative device
+    
+    In the current code, if only IgnoreRelativeAxes is set, the code would go on
+    and force absolute axes to initialize even if the relative axes were
+    successfully initialized.
+    
+    Evdev gives precedence to relative axes anyway, initializing absolute axes if
+    the relative axes failed. Thus, if we explicitely want relative axes but leave
+    the abs axes as-is, proceed as normal.
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 291b60172d25446d2cabe61ed93e56db6570baa3
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Thu Aug 14 10:48:52 2014 +1000
+
+    Fix axis initialization for devices with abs x/y and rel scrollwheels
+    
+    The Xen Virtual Pointer device has ABS_X, ABS_Y and REL_WHEEL. If smooth
+    scrolling is detected, the current code would first initialize relative axes
+    for scrolling and immediately overwrite those axes when the abs valuators are
+    written out.
+    
+    This patch fixes the default case only, in the case of a device setting the
+    two Ignore*Axis options both to "off", the axes are still overwritten. The
+    wheels will work, other axes only if the same number of abs axes exists. And
+    it keeps the current memory leak too, but it's marked with a FIXME now.
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 8ce06c96e469139bb12065d80fe4abb6173e2855
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Tue Aug 5 15:59:17 2014 +1000
+
+    Make the slot-state per slot
+    
+    The previous approach only had the slot state for the current slot. If we
+    changed slots, that means we lost the information if the slot was ever
+    initialized. If the ABS_MT_TRACKING_ID was never received, the slot would
+    still update and try to send events (which the server refused with a warning).
+    
+    Avoid this by having a per-slot state and a dirty bit that tells us if the
+    current slot updated at all. If we don't get the tracking ID, leave the slot
+    empty and refuse any further events from that touch.
+    
+    This quashes the various "unable to find touch point 0" warnings caused if a
+    touchpoint starts before the device is enabled.
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+    Reviewed-by: Walter Harms <wharms@bfs.de>
+
+commit 5d239ceb260cd554245e8f0dc3627990726ea9b9
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Thu May 15 08:41:06 2014 +1000
+
+    evdev 2.9.0
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 13dea90bc8ef2a2e6f55fb5ff5f54afe41d22f95
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Tue May 6 09:20:05 2014 +1000
+
+    Use the server's device list for duplicate detection (#78309)
+    
+    EvdevAddDevice/EvdevRemoveDevice keep a reference to the device to detect
+    duplicate devices based on the dev_t.
+    
+    EvdevAddDevices was called during PreInit, EvdevRemoveDevice was called during
+    DEVICE_CLOSE. That makes it imbalanced if the device succeeds PreInit but the
+    server skips everything else because MAX_DEVICES is exceeded. So for all
+    devices after MAX_DEVICES, we'd add a reference but never remove it,
+    eventually reading/writing past evdev_devices.
+    
+    The server keeps the list of devices for us anyway, so remove the copy of all
+    the pointers and instead run through the device list the server gives us.
+    
+    X.Org Bug 78309 <http://bugs.freedesktop.org/show_bug.cgi?id=78309>
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+    Reviewed-by: Hans de Goede <hdegoede@redhat.com>
+
+commit b25d71616557b0f3fc5e1ca65ba9e62809d14139
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Tue Apr 29 10:20:42 2014 +1000
+
+    evdev 2.8.99.1
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 41cf9212d02c1d2adca0e85702a1f0faba9e6b37
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Mon Apr 28 12:23:18 2014 +1000
+
+    Map REL_DIAL to horizontal scrolling (#73105)
+    
+    This was the original behavior introduced in
+    f77410e1f97d394e98c854fd174f712666b0544c and stayed that way until smooth
+    scrolling erroneously added it as vertical axis in
+    b450efdf95999cad08de23ce069f04a66bdae24b. Revert to horizontal scrolling to
+    restore the previous behaviour - which unbreaks scrolling on Microsoft mice.
+    
+    This effectively reverts 54a3120e339e55fc4721543abb15692c3e9ede09 too.
+    
+    X.Org Bug 73105 <http://bugs.freedesktop.org/show_bug.cgi?id=73105>
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 75368052b57aa07252e26642315bcf9a0b2e78eb
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Tue Apr 29 09:50:21 2014 +1000
+
+    Revert "Map REL_DIAL to horizontal scrolling (#73105)"
+    
+    Whoops, the vertical axis is swapped, so when changing the axis we also need
+    to change the direction.
+    
+    This reverts commit 16c85cbeacb721ed365c6240aabaad921b811fe0.
+
+commit 16c85cbeacb721ed365c6240aabaad921b811fe0
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Mon Apr 28 12:23:18 2014 +1000
+
+    Map REL_DIAL to horizontal scrolling (#73105)
+    
+    This was the original behavior introduced in
+    f77410e1f97d394e98c854fd174f712666b0544c and stayed that way until smooth
+    scrolling erroneously added it as vertical axis in
+    b450efdf95999cad08de23ce069f04a66bdae24b. Revert to horizontal scrolling to
+    restore the previous behaviour - which unbreaks scrolling on Microsoft mice.
+    
+    This effectively reverts 54a3120e339e55fc4721543abb15692c3e9ede09 too.
+    
+    X.Org Bug 73105 <http://bugs.freedesktop.org/show_bug.cgi?id=73105>
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+    Reviewed-by: Hans de Goede <hdegoede@redhat.com>
+
+commit ae67f64f02434171e1828b00fbf4277c8166966e
+Author: Hans de Goede <hdegoede@redhat.com>
+Date:   Sat Mar 8 10:28:00 2014 +0100
+
+    evdev: Add support for server managed fds
+    
+    Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit f6fcad8b107e834e26fb3da2c89e05294ff0a74c
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Mon Aug 26 14:56:07 2013 +1000
+
+    Fix wheel emulation for absolute device (#68415)
+    
+    wheel emulation, for some reasons beyond time, got the value from
+    pEvdev->vals, then set the value back into pEvdev->vals. Alas, that value is
+    always 0, hence oldValue is zero and the delta is nil.
+    
+    If we're not in relative (touchpad) mode, store the current value in
+    old_vals, so they're retrievable for the next event.
+    
+    X.Org Bug 68415 <http://bugs.freedesktop.org/show_bug.cgi?id=68415>
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit d171b3d9194581cb6ed59dbe45d6cbf009dc0eaa
+Author: Peter De Wachter <pdewacht@gmail.com>
+Date:   Wed Oct 3 22:08:12 2012 +0200
+
+    Export smooth scroll settings as an XInput property.
+    
+    A new property "Evdev Scrolling Distance" is created that holds three values
+    (vertical, horizontal and dial).
+    
+    Signed-off-by: Peter De Wachter <pdewacht@gmail.com>
+    Reviewed-by: Peter Hutterer <peter.hutterer@who-t.net>
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit c3251deb4b988610c3766081345e49f538fca865
+Author: Peter De Wachter <pdewacht@gmail.com>
+Date:   Wed Oct 3 20:48:24 2012 +0200
+
+    Add configuration options for smooth scrolling.
+    
+    This patch creates three new xorg.conf options, VertScrollDelta,
+    HorizScrollDelta and DialDelta, which adjust the sensitivity of
+    smooth scrolling. These options take a positive integer, default
+    value is 1.
+    
+    Signed-off-by: Peter De Wachter <pdewacht@gmail.com>
+    Reviewed-by: Peter Hutterer <peter.hutterer@who-t.net>
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit cabed4bbb6757e55f067126965f26bb0f716fb55
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Mon Oct 14 11:48:30 2013 +1000
+
+    Use num_slots where appropriate
+    
+    This was supposed to be added in 43e270fb7a10da20ab89dd699839c1cb6df119b4, but
+    got lost somehow.
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit a75c43830ef2f1b9ba0e265baf614cdfea617beb
+Merge: d9aadfd 164c62a
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Mon Oct 7 09:22:09 2013 +1100
+
+    Merge branch 'libevdev'
+
+commit d9aadfd5f05abd9a65977d9d36cbe159d6e05386
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Mon Oct 7 09:21:57 2013 +1100
+
+    bump to 2.8.99
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 54a3120e339e55fc4721543abb15692c3e9ede09
+Author: Peter De Wachter <pdewacht@gmail.com>
+Date:   Wed Mar 20 00:35:45 2013 +0100
+
+    Map REL_DIAL to vertical scrolling
+    
+    This makes the absolute axis codepath behave the same as the relative axis
+    path.
+    
+    Signed-off-by: Peter De Wachter <pdewacht@gmail.com>
+    Reviewed-by: Peter Hutterer <peter.hutterer@who-t.net>
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 164c62a97591d4c9b649460e7442977ea82ac02b
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Wed May 29 07:17:41 2013 +1000
+
+    Use libevdev as backend
+    
+    Removes the need to ioctl manually and check bits, with all the dangers that
+    come with that. libevdev is much better prepared for invalid values, OOB
+    checks, etc.
+    
+    Plus, we get almost free SYN_DROPPED handling as well which we didn't have
+    before.
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+    Reviewed-by: Adam Jackson <ajax@redhat.com>
+
+commit 43e270fb7a10da20ab89dd699839c1cb6df119b4
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Tue Sep 10 15:05:58 2013 +1000
+
+    Use helper function for counting slots
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+    Reviewed-by: Adam Jackson <ajax@redhat.com>
+
+commit 4ca57716ca4d0bea7bcd9a52e88e5cf7064a9ad9
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Tue Sep 10 15:04:40 2013 +1000
+
+    Drop ABS_MT_SLOT minimum - the kernel guarantees a minimum of 0
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+    Reviewed-by: Adam Jackson <ajax@redhat.com>
+
+commit 0f16065b00436c5df48af6e1d6a18e2ed27a12fd
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Wed Aug 28 14:23:49 2013 +1000
+
+    Remove a comment
+    
+    This comment is now in the wrong place. It was moved when abs support for
+    wheel emulation was added but is now only confusing. Remove it altogether,
+    the code is quite obvious what it does.
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit cae14787815c452a618c8bd684e2df4892dc93cb
+Author: Peter Hutterer <peter.hutterer@who-t.net>
+Date:   Thu Aug 1 10:43:32 2013 +1000
+
+    Don't use mtdev for protocol B devices
+    
+    If a device has ABS_MT_SLOT, mtdev merely reads the events and returns them
+    to the caller as-is. For this we don't need mtdev, we can just handle those
+    events ourselves.
+    
+    This patch switches to the mtdev plumbing layer that takes events and
+    converts them instead of reading them off the fd.
+    
+    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
+
+commit 27926b3763e525470ec8e4ac9a97aa0e02f1dd95
 Author: Peter Hutterer <peter.hutterer@who-t.net>
 Date:   Tue Aug 13 14:44:26 2013 +1000
 
@@ -19,21 +383,6 @@ Date:   Tue Aug 13 14:44:26 2013 +1000
     
     Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
     Reviewed-by: Daniel Stone <daniel@fooishbar.org>
-    (cherry picked from commit 27926b3763e525470ec8e4ac9a97aa0e02f1dd95)
-
-commit af1d0858775dd130c59de921210a114580fef719
-Author: Peter De Wachter <pdewacht@gmail.com>
-Date:   Wed Mar 20 00:35:45 2013 +0100
-
-    Map REL_DIAL to vertical scrolling
-    
-    This makes the absolute axis codepath behave the same as the relative axis
-    path.
-    
-    Signed-off-by: Peter De Wachter <pdewacht@gmail.com>
-    Reviewed-by: Peter Hutterer <peter.hutterer@who-t.net>
-    Signed-off-by: Peter Hutterer <peter.hutterer@who-t.net>
-    (cherry picked from commit 54a3120e339e55fc4721543abb15692c3e9ede09)
 
 commit 8a9b1ec6b58a36910a03f3e8b1f9bc8d91f87204
 Author: Peter Hutterer <peter.hutterer@who-t.net>

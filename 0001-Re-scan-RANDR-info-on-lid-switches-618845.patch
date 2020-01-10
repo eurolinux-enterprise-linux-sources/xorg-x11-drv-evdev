@@ -85,29 +85,14 @@ index af4aba3..87a2cf4 100644
      int ignore_abs = 0, ignore_rel = 0;
      EvdevPtr pEvdev = pInfo->private;
      int rc = 1;
-@@ -2160,8 +2199,29 @@ EvdevProbe(InputInfoPtr pInfo)
+@@ -2166,8 +2205,14 @@ EvdevProbe(InputInfoPtr pInfo)
      has_scroll = FALSE;
      has_lmr = FALSE;
      has_mt = FALSE;
 +    has_switch = FALSE;
      num_buttons = 0;
  
-+    if (EvdevBitIsSet(pEvdev->bitmask, EV_SW)) do {
-+        unsigned long sw_bitmask[NLONGS(SW_CNT)];
-+        int len;
-+
-+        len = ioctl(pInfo->fd, EVIOCGBIT(EV_SW, sizeof(sw_bitmask)),
-+                    sw_bitmask);
-+
-+        if (len < 0) {
-+            xf86Msg(X_ERROR, "%s: ioctl EVIOCGBIT failed: %s\n",
-+                    pInfo->name, strerror(errno));
-+            break;
-+        }
-+
-+        if (!EvdevBitIsSet(sw_bitmask, SW_LID))
-+            break;
-+
++    if (libevdev_has_event_code(pEvdev->dev, EV_SW, SW_LID)) {
 +        xf86Msg(X_INFO, "%s: Adding for lid switch\n", pInfo->name);
 +        has_switch = TRUE;
 +    } while (0);
