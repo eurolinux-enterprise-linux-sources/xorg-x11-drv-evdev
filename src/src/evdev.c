@@ -551,6 +551,16 @@ EvdevProcessProximityState(InputInfoPtr pInfo)
         }
     }
 
+    /* Wacom's last frame resets all values to 0, including x/y.
+       Skip over this. */
+    if (prox_state == 0) {
+        int v;
+        if (valuator_mask_fetch(pEvdev->abs_vals, 0, &v) && v == 0)
+            valuator_mask_unset(pEvdev->abs_vals, 0);
+        if (valuator_mask_fetch(pEvdev->abs_vals, 1, &v) && v == 0)
+            valuator_mask_unset(pEvdev->abs_vals, 1);
+    }
+
     if ((prox_state && !pEvdev->in_proximity) ||
         (!prox_state && pEvdev->in_proximity))
     {
@@ -905,7 +915,7 @@ EvdevPostProximityEvents(InputInfoPtr pInfo, int which)
                 break;
             case EV_QUEUE_PROXIMITY:
                 if (pEvdev->queue[i].val == which)
-                    xf86PostProximityEvent(pInfo->dev, which, 0, 0);
+                    xf86PostProximityEventM(pInfo->dev, which, pEvdev->old_vals);
                 break;
         }
     }
@@ -2353,8 +2363,10 @@ EvdevProbe(InputInfoPtr pInfo)
             pInfo->type_name = XI_TOUCHSCREEN;
 	} else {
             if (!libevdev_has_event_code(pEvdev->dev, EV_REL, REL_X) ||
-                !libevdev_has_event_code(pEvdev->dev, EV_REL, REL_Y))
+                !libevdev_has_event_code(pEvdev->dev, EV_REL, REL_Y)) {
+                pEvdev->flags |= EVDEV_RELATIVE_EVENTS;
                 EvdevForceXY(pInfo, Relative);
+            }
 	    xf86IDrvMsg(pInfo, X_INFO, "Configuring as mouse\n");
 	    pInfo->type_name = XI_MOUSE;
 	}
@@ -2485,7 +2497,7 @@ EvdevOpenDevice(InputInfoPtr pInfo)
     }
 
     if (pInfo->fd < 0) {
-        xf86IDrvMsg(pInfo, X_ERROR, "Unable to open evdev device \"%s\".\n", device);
+        xf86IDrvMsg(pInfo, X_ERROR, "Unable to open evdev device \"%s\" (%s).\n", device, strerror(errno));
         return BadValue;
     }
 
