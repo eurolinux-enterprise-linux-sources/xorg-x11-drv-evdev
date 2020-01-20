@@ -2,13 +2,13 @@
 %global moduledir %(pkg-config xorg-server --variable=moduledir )
 %global driverdir %{moduledir}/input
 
-#global gitdate 20130214
-%global gitversion c085c8b6c
+#global gitdate 20140417
+%global gitversion ae67f64
 
 Summary:    Xorg X11 evdev input driver
 Name:       xorg-x11-drv-evdev
-Version:    2.8.2
-Release:    5%{?gitdate:.%{gitdate}git%{gitversion}}%{?dist}
+Version:    2.9.2
+Release:    2%{?gitdate:.%{gitdate}git%{gitversion}}%{?dist}
 URL:        http://www.x.org
 License:    MIT
 Group:      User Interface/X Hardware Support
@@ -21,11 +21,13 @@ Source2:    commitid
 Source0:    ftp://ftp.x.org/pub/individual/driver/%{tarball}-%{version}.tar.bz2
 %endif
 
+Patch01:    0001-Drop-evdev-specific-XKB-defaults.patch
+
 ExcludeArch: s390 s390x
 
 BuildRequires: autoconf automake libtool
 BuildRequires: xorg-x11-server-devel >= 1.10.99.902
-BuildRequires: libudev-devel mtdev-devel
+BuildRequires: libudev-devel mtdev-devel libevdev-devel
 BuildRequires: xorg-x11-util-macros >= 1.3.0
 
 Requires: Xorg %(xserver-sdk-abi-requires ansic)
@@ -38,6 +40,7 @@ X.Org X11 evdev input driver.
 
 %prep
 %setup -q -n %{tarball}-%{?gitdate:%{gitdate}}%{!?gitdate:%{version}}
+%patch01 -p1
 
 %build
 autoreconf --force -v --install || exit 1
@@ -79,6 +82,12 @@ X.Org X11 evdev input driver development files.
 
 
 %changelog
+* Thu Apr 30 2015 Peter Hutterer <peter.hutterer@redhat.com> 2.9.2-2
+- git-add the missing patch (#1194874)
+
+* Thu Apr 30 2015 Peter Hutterer <peter.hutterer@redhat.com> 2.9.2-1
+- evdev 2.9.2 (#1194874)
+
 * Wed Jan 15 2014 Adam Jackson <ajax@redhat.com> - 2.8.2-5
 - 1.15 ABI rebuild
 
