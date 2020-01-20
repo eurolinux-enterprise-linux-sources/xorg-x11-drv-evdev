@@ -33,8 +33,6 @@
 #define EVDEV_PROP_MIDBUTTON "Evdev Middle Button Emulation"
 /* CARD32 */
 #define EVDEV_PROP_MIDBUTTON_TIMEOUT "Evdev Middle Button Timeout"
-/* CARD8 */
-#define EVDEV_PROP_MIDBUTTON_BUTTON "Evdev Middle Button Button"
 
 /* Wheel emulation */
 /* BOOL */
@@ -88,9 +86,5 @@
    1 send multimedia keys by default, fn may toggle to function keys
 */
 #define EVDEV_PROP_FUNCTION_KEYS "Evdev Function Keys"
-
-/* Smooth scroll */
-/* INT32, 3 values (vertical, horizontal, dial) */
-#define EVDEV_PROP_SCROLL_DISTANCE "Evdev Scrolling Distance"
 
 #endif

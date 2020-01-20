@@ -94,11 +94,6 @@ Sets the timeout (in milliseconds) that the driver waits before deciding
 if two buttons where pressed "simultaneously" when 3 button emulation is
 enabled.  Default: 50. Property: "Evdev Middle Button Timeout".
 .TP 7
-.BI "Option \*qEmulate3Button\*q \*q" integer \*q
-Specifies the physical button number to be emitted if middle button emulation
-is triggered.
-Default: 2.  Property: "Evdev Middle Button Button".
-.TP 7
 .BI "Option \*qEmulateWheel\*q \*q" boolean \*q
 Enable/disable "wheel" emulation.  Wheel emulation means emulating button
 press/release events when the mouse is moved while a specific real button
@@ -130,19 +125,6 @@ Property: "Evdev Wheel Emulation Button".
 Specifies how far (in pixels) the pointer must move to generate button
 press/release events in wheel emulation mode.  Default: 10. Property: "Evdev
 Wheel Emulation Inertia".
-.IP
-This value must be set for any device does not resemble a standard mouse.
-Specifically, on absolute devices such as tablets the value should be set to
-a reasonable fraction of the expected movement to avoid excess scroll events.
-.IP
-.B WARNING:
-the name \*qinertia\*q is a misnomer. This option defines the distance
-required to generate one scroll event similar to the
-.B VertScrollDelta
-and
-.B HorizScrollDelta
-options. It does not enable inertia in the
-physical sense, scrolling stops immediately once the movement has stopped.
 .TP 7
 .BI "Option \*qEmulateWheelTimeout\*q \*q" integer \*q
 Specifies the time in milliseconds the
@@ -244,24 +226,6 @@ Specify the X Input 1.x type (see XListInputDevices(__libmansuffix__)).
 There is rarely a need to use this option, evdev will guess the device type
 based on the device's capabilities. This option is provided for devices that
 need quirks.
-.TP 7
-.BI "Option \*qVertScrollDelta\*q \*q" integer \*q
-The amount of motion considered one unit of scrolling vertically.
-Default: "1".  Property: "Evdev Scrolling Distance".
-.TP 7
-.BI "Option \*qHorizScrollDelta\*q \*q" integer \*q
-The amount of motion considered one unit of scrolling horizontally.
-Default: "1".  Property: "Evdev Scrolling Distance".
-.TP 7
-.BI "Option \*qDialDelta\*q \*q" integer \*q
-The amount of motion considered one unit of turning the dial.  Default: "1".
-Property: "Evdev Scrolling Distance".
-.TP 7
-.BI "Option \*qResolution\*q \*q" integer \*q
-Sets the resolution of the device in dots per inch. The resolution is used
-to scale relative motion events from mouse devices to 1000 DPI resolution. This
-can be used to make high resolution mice less sensitive without turning off
-acceleration. If set to 0 no scaling will be performed. Default: "0".
 
 .SH SUPPORTED PROPERTIES
 The following properties are provided by the
@@ -288,9 +252,6 @@ value.
 .BI "Evdev Middle Button Timeout"
 1 16-bit positive value.
 .TP 7
-.BI "Evdev Middle Button Button"
-1 8-bit value, allowed range 0-32, 0 disables the button.
-.TP 7
 .BI "Evdev Wheel Emulation"
 1 boolean value (8 bit, 0 or 1).
 .TP 7
@@ -305,9 +266,6 @@ value.
 .TP 7
 .BI "Evdev Wheel Emulation Timeout"
 1 16-bit positive value.
-.TP 7
-.BI "Evdev Scrolling Distance"
-3 32-bit values: vertical, horizontal and dial.
 
 .SH AUTHORS
 Kristian Høgsberg, Peter Hutterer

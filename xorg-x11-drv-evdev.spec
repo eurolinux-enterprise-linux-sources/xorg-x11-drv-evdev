@@ -2,13 +2,13 @@
 %global moduledir %(pkg-config xorg-server --variable=moduledir )
 %global driverdir %{moduledir}/input
 
-#global gitdate 20140417
-%global gitversion ae67f64
+#global gitdate 20130214
+%global gitversion c085c8b6c
 
 Summary:    Xorg X11 evdev input driver
 Name:       xorg-x11-drv-evdev
-Version:    2.10.6
-Release:    1%{?gitdate:.%{gitdate}git%{gitversion}}%{?dist}
+Version:    2.8.2
+Release:    3%{?gitdate:.%{gitdate}git%{gitversion}}%{?dist}
 URL:        http://www.x.org
 License:    MIT
 Group:      User Interface/X Hardware Support
@@ -25,7 +25,7 @@ ExcludeArch: s390 s390x
 
 BuildRequires: autoconf automake libtool
 BuildRequires: xorg-x11-server-devel >= 1.10.99.902
-BuildRequires: libudev-devel mtdev-devel libevdev-devel
+BuildRequires: libudev-devel mtdev-devel
 BuildRequires: xorg-x11-util-macros >= 1.3.0
 
 Requires: Xorg %(xserver-sdk-abi-requires ansic)
@@ -61,7 +61,7 @@ rm -rf $RPM_BUILD_ROOT
 %doc COPYING
 %{driverdir}/evdev_drv.so
 %{_mandir}/man4/evdev.4*
-%{_datadir}/X11/xorg.conf.d/10-evdev.conf
+
 
 %package devel
 Summary:    Xorg X11 evdev input driver development package.
@@ -77,31 +77,8 @@ X.Org X11 evdev input driver development files.
 %dir %{_includedir}/xorg
 %{_includedir}/xorg/evdev-properties.h
 
+
 %changelog
-* Tue May 29 2018 Peter Hutterer <peter.hutterer@redhat.com> 2.10.6-1
-- evdev 2.10.6 (#1564618)
-
-* Wed Feb 08 2017 Peter Hutterer <peter.hutterer@redhat.com> 2.10.5-2.1
-- Build against the correct server package (#1401651)
-
-* Wed Feb 08 2017 Peter Hutterer <peter.hutterer@redhat.com> 2.10.5-2
-- Move 10-evdev.conf to the correct subpackage (#1401651)
-
-* Fri Jan 27 2017 Peter Hutterer <peter.hutterer@redhat.com> 2.10.5-1
-- evdev 2.10.5 (#1401651)
-
-* Thu Apr 30 2015 Peter Hutterer <peter.hutterer@redhat.com> 2.9.2-2
-- git-add the missing patch (#1194874)
-
-* Thu Apr 30 2015 Peter Hutterer <peter.hutterer@redhat.com> 2.9.2-1
-- evdev 2.9.2 (#1194874)
-
-* Wed Jan 15 2014 Adam Jackson <ajax@redhat.com> - 2.8.2-5
-- 1.15 ABI rebuild
-
-* Fri Dec 27 2013 Daniel Mach <dmach@redhat.com> - 2.8.2-4
-- Mass rebuild 2013-12-27
-
 * Wed Nov 06 2013 Adam Jackson <ajax@redhat.com> - 2.8.2-3
 - 1.15RC1 ABI rebuild
 

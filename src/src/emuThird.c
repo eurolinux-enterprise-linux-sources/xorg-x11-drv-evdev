@@ -89,19 +89,12 @@ Evdev3BEmuTimer(OsTimerPtr timer, CARD32 time, pointer arg)
     InputInfoPtr      pInfo    = (InputInfoPtr)arg;
     EvdevPtr          pEvdev   = pInfo->private;
     struct emulate3B *emu3B    = &pEvdev->emulate3B;
+    int               sigstate = 0;
 
-#if HAVE_THREADED_INPUT
-    input_lock();
-#else
-    int sigstate = xf86BlockSIGIO();
-#endif
+    sigstate = xf86BlockSIGIO ();
     emu3B->state = EM3B_EMULATING;
     Evdev3BEmuPostButtonEvent(pInfo, emu3B->button, BUTTON_PRESS);
-#if HAVE_THREADED_INPUT
-    input_unlock();
-#else
-    xf86UnblockSIGIO(sigstate);
-#endif
+    xf86UnblockSIGIO (sigstate);
     return 0;
 }
 
@@ -236,8 +229,8 @@ Evdev3BEmuProcessAbsMotion(InputInfoPtr pInfo, ValuatorMask *vals)
     {
         if (valuator_mask_isset(vals, axis))
         {
-            double delta = valuator_mask_get_double(vals, axis) - emu3B->startpos[axis];
-            if (fabs(delta) > emu3B->threshold)
+            int delta = valuator_mask_get(vals, axis) - emu3B->startpos[axis];
+            if (abs(delta) > emu3B->threshold)
                 cancel = TRUE;
         }
         axis++;
@@ -255,7 +248,7 @@ Evdev3BEmuProcessAbsMotion(InputInfoPtr pInfo, ValuatorMask *vals)
  * emulation.
  */
 void
-Evdev3BEmuProcessRelMotion(InputInfoPtr pInfo, double dx, double dy)
+Evdev3BEmuProcessRelMotion(InputInfoPtr pInfo, int dx, int dy)
 {
     EvdevPtr          pEvdev = pInfo->private;
     struct emulate3B *emu3B  = &pEvdev->emulate3B;
@@ -267,8 +260,8 @@ Evdev3BEmuProcessRelMotion(InputInfoPtr pInfo, double dx, double dy)
     emu3B->delta[1] += dy;
     emu3B->flags |= EVDEV_RELATIVE_EVENTS;
 
-    if (fabs(emu3B->delta[0]) > emu3B->threshold ||
-        fabs(emu3B->delta[1]) > emu3B->threshold)
+    if (abs(emu3B->delta[0]) > emu3B->threshold ||
+        abs(emu3B->delta[1]) > emu3B->threshold)
     {
         Evdev3BEmuPostButtonEvent(pInfo, 1, BUTTON_PRESS);
         Evdev3BCancel(pInfo);

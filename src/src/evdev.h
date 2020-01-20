@@ -43,9 +43,9 @@
 #include <xf86_OSproc.h>
 #include <xkbstr.h>
 
+#ifdef MULTITOUCH
 #include <mtdev.h>
-
-#include <libevdev/libevdev.h>
+#endif
 
 #ifndef EV_CNT /* linux 2.6.23 kernels and earlier lack _CNT defines */
 #define EV_CNT (EV_MAX+1)
@@ -63,20 +63,12 @@
 #define LED_CNT (LED_MAX+1)
 #endif
 
+#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 14
+#define HAVE_SMOOTH_SCROLLING 1
+#endif
+
 #if GET_ABI_MAJOR(ABI_XINPUT_VERSION) < 18
 #define LogMessageVerbSigSafe xf86MsgVerb
-#endif
-
-#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 23
-#define HAVE_THREADED_INPUT	1
-#endif
-
-#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 24
-#define BLOCK_HANDLER_ARGS     	void *data, void *waitTime
-#define WAKEUP_HANDLER_ARGS	void *data, int i
-#else
-#define BLOCK_HANDLER_ARGS	pointer data, struct timeval **waitTime, pointer LastSelectMask
-#define WAKEUP_HANDLER_ARGS	void *data, int i, pointer LastSelectMask
 #endif
 
 #define EVDEV_MAXBUTTONS 32
@@ -108,8 +100,6 @@
 
 /* Number of longs needed to hold the given number of bits */
 #define NLONGS(x) (((x) + LONG_BITS - 1) / LONG_BITS)
-
-#define DEFAULT_MOUSE_DPI 1000.0
 
 /* Function key mode */
 enum fkeymode {
@@ -143,18 +133,25 @@ typedef struct {
         EV_QUEUE_KEY,	/* xf86PostKeyboardEvent() */
         EV_QUEUE_BTN,	/* xf86PostButtonEvent() */
         EV_QUEUE_PROXIMITY, /* xf86PostProximityEvent() */
+#ifdef MULTITOUCH
         EV_QUEUE_TOUCH,	/*xf86PostTouchEvent() */
+#endif
     } type;
     union {
         int key;	/* May be either a key code or button number. */
+#ifdef MULTITOUCH
         unsigned int touch; /* Touch ID */
+#endif
     } detail;
     int val;	/* State of the key/button/touch; pressed or released. */
+#ifdef MULTITOUCH
     ValuatorMask *touchMask;
+#endif
 } EventQueueRec, *EventQueuePtr;
 
 typedef struct {
-    struct libevdev *dev;
+    unsigned short id_vendor;
+    unsigned short id_product;
 
     char *device;
     int grabDevice;         /* grab the event device? */
@@ -163,19 +160,16 @@ typedef struct {
     int num_mt_vals;        /* number of multitouch valuators */
     int abs_axis_map[ABS_CNT]; /* Map evdev ABS_* to index */
     int rel_axis_map[REL_CNT]; /* Map evdev REL_* to index */
-    ValuatorMask *abs_vals;     /* values for absolute axis */
-    ValuatorMask *rel_vals;     /* values for relative axis */
-    ValuatorMask *old_vals; /* old absolute values for calculating relative motion */
-    ValuatorMask *prox;     /* last absolute values set while not in proximity */
+    ValuatorMask *vals;     /* new values coming in */
+    ValuatorMask *old_vals; /* old values for calculating relative motion */
+    ValuatorMask *prox;     /* last values set while not in proximity */
     ValuatorMask *mt_mask;
     ValuatorMask **last_mt_vals;
     int cur_slot;
-    struct slot {
-        int dirty;
-        enum SlotState state;
-    } *slots;
+    enum SlotState slot_state;
+#ifdef MULTITOUCH
     struct mtdev *mtdev;
-    BOOL fake_mt;
+#endif
 
     int flags;
     int in_proximity;           /* device in proximity */
@@ -184,8 +178,8 @@ typedef struct {
     BOOL swap_axes;
     BOOL invert_x;
     BOOL invert_y;
-    int resolution;
 
+    int delta[REL_CNT];
     unsigned int abs_queued, rel_queued, prox_queued;
 
     /* Middle mouse button emulation */
@@ -196,7 +190,6 @@ typedef struct {
         int                 state;       /* state machine (see bt3emu.c) */
         Time                expires;     /* time of expiry */
         Time                timeout;
-        uint8_t             button;      /* phys button to emit */
     } emulateMB;
     /* Third mouse button emulation */
     struct emulate3B {
@@ -207,7 +200,7 @@ typedef struct {
         int                 button;      /* phys button to emit */
         int                 threshold;   /* move threshold in dev coords */
         OsTimerPtr          timer;
-        double              delta[2];    /* delta x/y, accumulating */
+        int                 delta[2];    /* delta x/y, accumulating */
         int                 startpos[2]; /* starting pos for abs devices */
         int                 flags;       /* remember if we had rel or abs movement */
     } emulate3B;
@@ -227,11 +220,6 @@ typedef struct {
         Time                expires;     /* time of expiry */
         Time                timeout;
     } emulateWheel;
-    struct {
-        int                 vert_delta;
-        int                 horiz_delta;
-        int                 dial_delta;
-    } smoothScroll;
     /* run-time calibration */
     struct {
         int                 min_x;
@@ -245,6 +233,13 @@ typedef struct {
     int reopen_attempts; /* max attempts to re-open after read failure */
     int reopen_left;     /* number of attempts left to re-open the device */
     OsTimerPtr reopen_timer;
+
+    /* Cached info from device. */
+    unsigned long bitmask[NLONGS(EV_CNT)];
+    unsigned long key_bitmask[NLONGS(KEY_CNT)];
+    unsigned long rel_bitmask[NLONGS(REL_CNT)];
+    unsigned long abs_bitmask[NLONGS(ABS_CNT)];
+    struct input_absinfo absinfo[ABS_CNT];
 
     /* minor/major number */
     dev_t min_maj;
@@ -262,19 +257,23 @@ typedef struct {
 void EvdevQueueKbdEvent(InputInfoPtr pInfo, struct input_event *ev, int value);
 void EvdevQueueButtonEvent(InputInfoPtr pInfo, int button, int value);
 void EvdevQueueProximityEvent(InputInfoPtr pInfo, int value);
+#ifdef MULTITOUCH
 void EvdevQueueTouchEvent(InputInfoPtr pInfo, unsigned int touch,
                           ValuatorMask *mask, uint16_t type);
+#endif
 void EvdevPostButtonEvent(InputInfoPtr pInfo, int button, enum ButtonAction act);
 void EvdevQueueButtonClicks(InputInfoPtr pInfo, int button, int count);
-void EvdevPostRelativeMotionEvents(InputInfoPtr pInfo);
-void EvdevPostAbsoluteMotionEvents(InputInfoPtr pInfo);
+void EvdevPostRelativeMotionEvents(InputInfoPtr pInfo, int num_v, int first_v,
+				   int v[MAX_VALUATORS]);
+void EvdevPostAbsoluteMotionEvents(InputInfoPtr pInfo, int num_v, int first_v,
+				   int v[MAX_VALUATORS]);
 unsigned int EvdevUtilButtonEventToButtonNumber(EvdevPtr pEvdev, int code);
 
 /* Middle Button emulation */
 int  EvdevMBEmuTimer(InputInfoPtr);
 BOOL EvdevMBEmuFilterEvent(InputInfoPtr, int, BOOL);
-void EvdevMBEmuWakeupHandler(WAKEUP_HANDLER_ARGS);
-void EvdevMBEmuBlockHandler(BLOCK_HANDLER_ARGS);
+void EvdevMBEmuWakeupHandler(pointer, int, pointer);
+void EvdevMBEmuBlockHandler(pointer, struct timeval**, pointer);
 void EvdevMBEmuPreInit(InputInfoPtr);
 void EvdevMBEmuOn(InputInfoPtr);
 void EvdevMBEmuFinalize(InputInfoPtr);
@@ -285,7 +284,7 @@ BOOL Evdev3BEmuFilterEvent(InputInfoPtr, int, BOOL);
 void Evdev3BEmuPreInit(InputInfoPtr pInfo);
 void Evdev3BEmuOn(InputInfoPtr);
 void Evdev3BEmuFinalize(InputInfoPtr);
-void Evdev3BEmuProcessRelMotion(InputInfoPtr pInfo, double dx, double dy);
+void Evdev3BEmuProcessRelMotion(InputInfoPtr pInfo, int dx, int dy);
 void Evdev3BEmuProcessAbsMotion(InputInfoPtr pInfo, ValuatorMask *vals);
 
 /* Mouse Wheel emulation */
